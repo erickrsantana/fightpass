@@ -2,7 +2,7 @@
   const config = window.FightPassConfig || {};
   const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const API_BASE_URL = normalizeApiBaseUrl(
-    localStorage.getItem("fightpass.apiBaseUrl") || config.apiBaseUrl || (isLocalHost ? "http://localhost:3000/api" : "")
+    config.apiBaseUrl || (isLocalHost ? "http://localhost:3000/api" : "")
   );
   const TOKEN_KEY = "fightpass.token";
   const USER_KEY = "fightpass.user";
