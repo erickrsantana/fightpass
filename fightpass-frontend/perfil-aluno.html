@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Perfil do Aluno</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="perfil-aluno">
+    <main class="main-content">
+        <header style="margin-bottom: 30px;">
+            <h1 style="font-size: 28px;">Perfil do aluno</h1>
+            <p style="color: #64748B;">Dados acadêmicos, avaliações e progresso do aluno selecionado.</p>
+        </header>
+
+        <div id="student-profile-message" hidden></div>
+
+        <section class="card-white" style="max-width: 1000px;">
+            <div style="margin-bottom: 30px;">
+                <h2 id="student-name" style="font-size: 22px; color: var(--primary-blue);">-</h2>
+                <p><strong>Modalidade:</strong> <span id="student-modality">-</span></p>
+                <p style="color: #10B981;"><strong>Presença média:</strong> <span id="student-attendance">-</span></p>
+                <p><strong>Nota média:</strong> <span id="student-score">-</span></p>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 20px 0;">
+
+            <h3 style="font-size: 18px; margin-bottom: 15px;">Linha do tempo de evolução</h3>
+            <div id="progress-list" class="evolution-list"></div>
+
+            <h3 style="font-size: 18px; margin: 28px 0 15px;">Histórico de avaliações</h3>
+            <div id="evaluation-list"></div>
+
+            <div class="button-row" style="margin-top: 30px;">
+                <a id="evaluate-link" class="btn-primary" style="padding: 10px 25px; text-align: center;" href="avaliar-aluno.html">Nova avaliação</a>
+                <button class="btn-secondary" style="padding: 10px 25px;" onclick="history.back()">Voltar</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>

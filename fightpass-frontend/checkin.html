@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Check-in</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .qr-frame {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            margin: 20px 0;
+        }
+
+        .timer {
+            font-weight: bold;
+            color: var(--primary-blue);
+            font-size: 1.2rem;
+        }
+
+        .token-box {
+            word-break: break-all;
+            color: #334155;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 12px;
+            width: 100%;
+            max-width: 520px;
+        }
+    </style>
+</head>
+<body class="light-theme app-shell" data-page="checkin">
+    <main class="main-content">
+        <header style="margin-bottom: 30px;">
+            <h1 style="font-size: 28px;">Check-in na academia</h1>
+            <p style="color: #64748B;">Gere um token real de presença e confirme o fluxo para demonstração.</p>
+        </header>
+
+        <div id="checkin-message" hidden></div>
+
+        <section class="card-white qr-container">
+            <h2 style="font-size: 20px;">Seu QR Code de presença</h2>
+            <p style="font-size: 14px; color: #64748B;">O token expira conforme a variável <strong>CHECKIN_TOKEN_TTL_SECONDS</strong>.</p>
+
+            <div id="qr-area" hidden>
+                <div class="qr-frame">
+                    <img id="qr-code" alt="QR Code de Check-in" style="width: 250px; height: 250px;">
+                </div>
+                <p style="font-size: 14px; color: #64748B;">Token para conferência manual:</p>
+                <div id="token-value" class="token-box"></div>
+                <p style="font-size: 14px; color: #64748B; margin-top: 16px;">Expira em:</p>
+                <p class="timer" id="countdown">00:45</p>
+            </div>
+
+            <div class="button-row" style="margin-top: 30px;">
+                <button class="btn-primary" id="generate-token" type="button">Gerar token</button>
+                <button class="btn-secondary" id="confirm-token" type="button">Confirmar check-in</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="dashboard">
+    <main class="main-content">
+        <h1 style="margin-bottom: 14px;">Dashboard</h1>
+        <p style="color: #64748B;">Indicadores carregados diretamente da API conforme o perfil autenticado.</p>
+        <div data-flash hidden></div>
+        <div id="dashboard-message" hidden></div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+            <div class="card-white">
+                <h3 id="metric-one-label">Aulas agendadas</h3>
+                <h2 id="metric-one-value" style="color: var(--primary-blue)">-</h2>
+            </div>
+            <div class="card-white">
+                <h3 id="metric-two-label">Presença</h3>
+                <h2 id="metric-two-value" style="color: #10b981">-</h2>
+            </div>
+            <div class="card-white">
+                <h3 id="metric-three-label">Avaliação</h3>
+                <h2 id="metric-three-value" style="color: var(--primary-blue)">-</h2>
+            </div>
+        </div>
+
+        <section id="access-summary" class="card-white" style="margin-top: 24px;" hidden></section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>
