@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme" data-page="login">
+    <div class="search-bar-top">
+        <div class="logo">FightPass</div>
+        <input type="text" class="search-input" placeholder="Pesquisar academia, modalidade ou aluno">
+    </div>
+
+    <div class="login-container">
+        <form class="card-white" id="login-form" style="width: 420px;">
+            <h1 style="margin-bottom: 5px;">Entrar</h1>
+            <p style="color: #64748B; margin-bottom: 25px; font-size: 14px;">Faça login para acessar o FightPass.</p>
+            <div data-flash hidden></div>
+            <div id="login-message" hidden></div>
+
+            <div class="input-group">
+                <label for="login-email">Email</label>
+                <input id="login-email" name="email" type="email" class="input-field" placeholder="seuemail@exemplo.com" required>
+            </div>
+
+            <div class="input-group">
+                <label for="login-password">Senha</label>
+                <input id="login-password" name="password" type="password" class="input-field" placeholder="Digite sua senha" required>
+            </div>
+
+            <button class="btn-primary" type="submit">Entrar</button>
+
+            <div style="text-align: center; margin-top: 16px; font-size: 14px;">
+                <a href="redefinir-senha.html" style="color: #64748B;">Esqueci minha senha</a>
+            </div>
+            <div style="text-align: center; margin-top: 12px; font-size: 14px; color: #64748B;">
+                Não tem conta?
+                <a href="cadastro.html" style="color: #3B82F6; font-weight: 600;">Cadastre-se</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>

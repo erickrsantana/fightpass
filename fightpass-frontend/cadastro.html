@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Cadastro</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .register-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .register-card {
+            background: white;
+            border-radius: 12px;
+            padding: 42px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+            border: 1px solid #E2E8F0;
+        }
+    </style>
+</head>
+<body class="light-theme" data-page="cadastro">
+    <div class="register-container">
+        <main class="register-card">
+            <header style="text-align: center; margin-bottom: 30px;">
+                <div class="logo" style="margin-bottom: 10px;">FightPass</div>
+                <h1 style="font-size: 24px; color: #1E293B; margin-bottom: 5px;">Cadastro</h1>
+                <p style="color: #64748B; font-size: 14px;">Alunos recebem teste gratuito. Instituições assinam o plano após o cadastro.</p>
+            </header>
+
+            <div id="register-message" hidden></div>
+
+            <form id="register-form">
+                <div class="input-group">
+                    <label for="register-name">Nome completo ou razão social</label>
+                    <input id="register-name" type="text" name="name" class="input-field" placeholder="Ex.: João Silva" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="register-email">Email</label>
+                    <input id="register-email" type="email" name="email" class="input-field" placeholder="seuemail@exemplo.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="register-password">Senha</label>
+                    <input id="register-password" type="password" name="password" class="input-field" placeholder="Mínimo de 8 caracteres, letra maiúscula e número" required minlength="8">
+                </div>
+
+                <div class="input-group">
+                    <label for="account-type">Tipo de conta</label>
+                    <select id="account-type" name="accountType" class="input-field" required>
+                        <option value="student">Aluno</option>
+                        <option value="instructor">Instrutor</option>
+                        <option value="institution_admin">Administrador da instituição</option>
+                    </select>
+                </div>
+
+                <div class="input-group" id="institution-group" hidden>
+                    <label for="institution-name">Nome da instituição</label>
+                    <input id="institution-name" type="text" name="institutionName" class="input-field" placeholder="Ex.: Dojo Sakura">
+                </div>
+
+                <div class="input-group">
+                    <label for="register-document">CPF ou CNPJ</label>
+                    <input id="register-document" type="text" name="document" class="input-field" placeholder="000.000.000-00" required>
+                    <small style="color:#64748B;">Para aluno, informe um CPF válido para liberar o teste de 1 dia.</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="register-phone">Telefone</label>
+                    <input id="register-phone" type="text" name="phone" class="input-field" placeholder="(11) 99999-9999">
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 12px;">Criar conta</button>
+
+                <div style="text-align: center; margin-top: 25px; font-size: 14px; color: #64748B;">
+                    Já tem conta?
+                    <a href="login.html" style="color: #3B82F6; font-weight: 600; margin-left: 5px;">Entrar</a>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>

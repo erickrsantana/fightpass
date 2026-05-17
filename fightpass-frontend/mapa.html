@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Mapa de Academias</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="mapa">
+    <main class="main-content">
+        <header style="margin-bottom: 30px;">
+            <h1>Mapa de academias</h1>
+            <p style="color: #64748B;">Pesquise instituições por modalidade ou nome.</p>
+        </header>
+
+        <div id="map-message" hidden></div>
+
+        <div class="card-white" style="margin-bottom: 20px;">
+            <div class="input-group">
+                <label for="map-search">Buscar academia</label>
+                <input id="map-search" type="search" class="input-field" placeholder="Digite parte do nome da instituição">
+            </div>
+            <div id="modality-list" class="button-row"></div>
+        </div>
+
+        <div class="map-layout">
+            <section class="card-white map-panel">
+                <div id="map-view"></div>
+            </section>
+
+            <aside>
+                <div id="institution-list"></div>
+                <section id="institution-details" class="card-white" style="margin-top: 20px;">
+                    <h2>Detalhes</h2>
+                    <p style="color: #64748B; margin-top: 8px;">Selecione uma instituição para visualizar dados, modalidades e turmas vinculadas.</p>
+                </section>
+            </aside>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>
