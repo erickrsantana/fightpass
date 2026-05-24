@@ -94,6 +94,9 @@
     const form = $("#register-form");
     const accountType = $("#account-type");
     const institutionGroup = $("#institution-group");
+    const termsAcceptance = window.FightPassTerms.createAcceptance("#register-terms", {
+      origin: "cadastro"
+    });
 
     function syncInstitutionField() {
       institutionGroup.hidden = accountType.value !== "institution_admin";
@@ -101,9 +104,15 @@
 
     accountType.addEventListener("change", syncInstitutionField);
     syncInstitutionField();
+    await termsAcceptance.load();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (!termsAcceptance.isAccepted()) {
+        setMessage("#register-message", "Aceite os Termos de Uso para finalizar o cadastro.", "error");
+        return;
+      }
+
       setMessage("#register-message", "Criando conta...", "loading");
       const data = formData(form);
       try {
@@ -114,7 +123,8 @@
           accountType: data.accountType,
           document: data.document,
           phone: data.phone || null,
-          institutionName: data.institutionName || data.name
+          institutionName: data.institutionName || data.name,
+          ...termsAcceptance.payload()
         });
         api.saveSession(response.data);
         api.setFlash(
@@ -896,6 +906,10 @@
     const plansList = $("#plans-list");
     const currentAccess = $("#current-access");
     const paymentResult = $("#payment-result");
+    const termsAcceptance = window.FightPassTerms.createAcceptance("#plans-terms", {
+      origin: "contratacao_plano"
+    });
+    await termsAcceptance.load();
 
     if (user.role !== "student") {
       const institutionId = currentInstitutionOrStop(user, "#plans-message");
@@ -944,10 +958,6 @@
             <p style="color:#64748B; min-height:54px;">${html(plan.description)}</p>
             <strong style="font-size:28px; color:var(--primary-blue);">${formatCurrency(plan.priceCents)}</strong>
             <small style="color:#64748B;">Mensalidade para DOJO parceiro</small>
-            <label style="display:flex; align-items:flex-start; gap:10px; color:#334155; font-size:14px; line-height:1.5;">
-              <input type="checkbox" data-dojo-contract style="width:18px; height:18px; margin-top:2px;">
-              Li e aceito o contrato de parceria FightPass, autorizando a publicação das aulas do DOJO na plataforma e a cobrança mensal fictícia deste protótipo.
-            </label>
             <button class="btn-primary" type="button" data-dojo-plan-id="${plan.id}">Gerar mensalidade</button>
           </article>
         `).join("");
@@ -959,9 +969,8 @@
       plansList.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-dojo-plan-id]");
         if (!button) return;
-        const contractAccepted = Boolean(plansList.querySelector("[data-dojo-contract]")?.checked);
-        if (!contractAccepted) {
-          setMessage("#plans-message", "Aceite o contrato de parceria antes de gerar a mensalidade.", "error");
+        if (!termsAcceptance.isAccepted()) {
+          setMessage("#plans-message", "Aceite os Termos de Uso antes de gerar a mensalidade.", "error");
           return;
         }
         setMessage("#plans-message", "Gerando mensalidade fictícia...", "loading");
@@ -971,7 +980,7 @@
             body: {
               institutionId,
               method: $("#payment-method").value,
-              contractAccepted
+              ...termsAcceptance.payload()
             }
           });
           renderDojoPayment(response.data);
@@ -1069,13 +1078,19 @@
     plansList.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-plan-id]");
       if (!button) return;
+      if (!termsAcceptance.isAccepted()) {
+        setMessage("#plans-message", "Aceite os Termos de Uso antes de contratar o plano.", "error");
+        return;
+      }
+
       setMessage("#plans-message", "Gerando cobrança fictícia...", "loading");
       try {
         const response = await api.request("/payments/simulate", {
           method: "POST",
           body: {
             planId: Number(button.dataset.planId),
-            method: $("#payment-method").value
+            method: $("#payment-method").value,
+            ...termsAcceptance.payload()
           }
         });
         renderPayment(response.data);

@@ -15,6 +15,7 @@ const {
 const { auditLog, getUserInstitutions } = require("../../lib/business");
 const { createTrialAccess, isValidCpf, onlyDigits } = require("../../lib/access");
 const { requestPasswordReset, resetPassword } = require("../../services/passwordResetService");
+const { assertTermsAccepted, recordTermsAcceptance } = require("../../services/termsService");
 
 const router = express.Router();
 
@@ -103,6 +104,11 @@ router.post(
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
+    assertTermsAccepted({
+      accepted: req.body.termsAccepted,
+      version: req.body.termsVersion
+    });
+
     const existing = await findUserByEmail(req.body.email);
     if (existing) {
       throw new ApiError(409, "Ja existe um usuario com este email");
@@ -178,12 +184,20 @@ router.post(
         }, connection);
       }
 
+      const termsAcceptance = await recordTermsAcceptance({
+        userId: insertUser.insertId,
+        version: req.body.termsVersion,
+        origin: "cadastro",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"]
+      }, connection);
+
       await auditLog(
         insertUser.insertId,
         "auth.register",
         req.body.accountType === "institution_admin" ? "institutions" : "users",
         institutionId || insertUser.insertId,
-        { role: req.body.accountType, trialAccess: Boolean(access) },
+        { role: req.body.accountType, trialAccess: Boolean(access), termsAcceptanceId: termsAcceptance.id },
         connection
       );
 

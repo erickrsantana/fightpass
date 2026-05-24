@@ -95,8 +95,7 @@ router.post(
   auth(["institution_admin"]),
   [
     body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("method").isIn(["pix", "boleto"]).withMessage("Forma de pagamento invalida"),
-    body("contractAccepted").custom((value) => value === true || value === "true").withMessage("Aceite do contrato obrigatorio")
+    body("method").isIn(["pix", "boleto"]).withMessage("Forma de pagamento invalida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -105,7 +104,10 @@ router.post(
       institutionId: req.body.institutionId,
       method: req.body.method,
       userId: req.user.sub,
-      contractAccepted: req.body.contractAccepted === true || req.body.contractAccepted === "true"
+      termsAccepted: req.body.termsAccepted,
+      termsVersion: req.body.termsVersion,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"]
     });
     return success(res, payment, "Cobranca DOJO ficticia gerada com sucesso", 201);
   })

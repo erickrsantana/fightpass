@@ -136,6 +136,61 @@ body.dark-theme {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+.terms-acceptance {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.terms-box {
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F8FAFC;
+    padding: 16px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.terms-box h2 {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.terms-box p,
+.terms-box span,
+.terms-box small {
+    color: #64748B;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.terms-list {
+    display: grid;
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.terms-list strong,
+.terms-list span {
+    display: block;
+}
+
+.terms-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.terms-checkbox input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    flex: 0 0 auto;
+}
+
 .logo { color: var(--primary-blue); font-weight: bold; font-size: 24px; }
 
 .nav-link { 

@@ -1,6 +1,7 @@
 const db = require("../database/connection");
 const { ApiError } = require("../lib/http");
 const { auditLog } = require("../lib/business");
+const { ensureTermsAccepted } = require("./termsService");
 
 function addDays(date, days) {
   const next = new Date(date);
@@ -75,21 +76,26 @@ async function ensureSubscriptionExists(institutionId, connection = null) {
   return getInstitutionSubscription(institutionId);
 }
 
-async function createDojoPaymentSimulation({ institutionId, method, userId, contractAccepted }) {
-  if (!contractAccepted) {
-    throw new ApiError(422, "Aceite do contrato obrigatorio para assinar o Plano DOJO");
-  }
-
+async function createDojoPaymentSimulation({ institutionId, method, userId, termsAccepted, termsVersion, ipAddress, userAgent }) {
   const plan = await getDojoPlan();
   const connection = await db.pool.getConnection();
 
   try {
     await connection.beginTransaction();
+    const termsAcceptance = await ensureTermsAccepted({
+      userId,
+      accepted: termsAccepted,
+      version: termsVersion,
+      origin: "contratacao_plano",
+      ipAddress,
+      userAgent
+    }, connection);
+
     const [insert] = await connection.execute(
       `INSERT INTO dojo_payment_simulations
-         (institution_id, plan_id, method, amount_cents, contract_accepted, contract_accepted_at, contract_text_version, status)
-       VALUES (?, ?, ?, ?, 1, NOW(), 'dojo_terms_v1', 'pending')`,
-      [institutionId, plan.id, method, plan.price_cents]
+         (institution_id, plan_id, method, amount_cents, terms_acceptance_id, contract_accepted, contract_accepted_at, contract_text_version, status)
+       VALUES (?, ?, ?, ?, ?, 1, NOW(), ?, 'pending')`,
+      [institutionId, plan.id, method, plan.price_cents, termsAcceptance.id, termsVersion]
     );
 
     const code = method === "pix"
@@ -117,9 +123,10 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, cont
       planId: plan.id,
       method,
       amountCents: plan.price_cents,
+      termsAcceptanceId: termsAcceptance.id,
       status: "pending",
       contractAccepted: true,
-      contractTextVersion: "dojo_terms_v1",
+      contractTextVersion: termsVersion,
       pixCode: method === "pix" ? code : null,
       boletoCode: method === "boleto" ? code : null,
       prototypeNotice: "Pagamento ficticio para demonstracao academica. Nenhuma cobranca real sera executada."
@@ -135,7 +142,7 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, cont
 async function confirmDojoPayment(paymentId, userId) {
   const rows = await db.query(
     `SELECT dp.id, dp.institution_id, dp.plan_id, dp.status, pp.duration_days, pp.price_cents,
-            dp.contract_accepted
+            dp.contract_accepted, dp.terms_acceptance_id
      FROM dojo_payment_simulations dp
      INNER JOIN platform_plans pp ON pp.id = dp.plan_id
      WHERE dp.id = ?
@@ -152,8 +159,8 @@ async function confirmDojoPayment(paymentId, userId) {
     throw new ApiError(409, "Pagamento DOJO ja confirmado");
   }
 
-  if (!payment.contract_accepted) {
-    throw new ApiError(422, "Contrato do Plano DOJO nao foi aceito");
+  if (!payment.contract_accepted || !payment.terms_acceptance_id) {
+    throw new ApiError(422, "Termos de Uso do Plano DOJO nao foram aceitos");
   }
 
   const today = new Date();

@@ -15,6 +15,7 @@ const {
   buildPixCode,
   buildBoletoCode
 } = require("../../lib/access");
+const { ensureTermsAccepted } = require("../../services/termsService");
 
 const router = express.Router();
 
@@ -99,10 +100,19 @@ router.post(
 
     try {
       await connection.beginTransaction();
+      const termsAcceptance = await ensureTermsAccepted({
+        userId: req.user.sub,
+        accepted: req.body.termsAccepted,
+        version: req.body.termsVersion,
+        origin: "contratacao_plano",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"]
+      }, connection);
+
       const [insertPayment] = await connection.execute(
-        `INSERT INTO payment_simulations (student_id, plan_id, method, amount_cents, status)
-         VALUES (?, ?, ?, ?, 'pending')`,
-        [req.user.sub, plan.id, req.body.method, plan.price_cents]
+        `INSERT INTO payment_simulations (student_id, plan_id, method, amount_cents, terms_acceptance_id, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')`,
+        [req.user.sub, plan.id, req.body.method, plan.price_cents, termsAcceptance.id]
       );
 
       const paymentId = insertPayment.insertId;
@@ -119,6 +129,7 @@ router.post(
       await auditLog(req.user.sub, "payments.simulate", "payment_simulations", paymentId, {
         planId: plan.id,
         method: req.body.method,
+        termsAcceptanceId: termsAcceptance.id,
         prototype: true
       }, connection);
 
@@ -152,7 +163,7 @@ router.post(
     try {
       await connection.beginTransaction();
       const [paymentRows] = await connection.execute(
-        `SELECT ps.id, ps.student_id, ps.plan_id, ps.status,
+        `SELECT ps.id, ps.student_id, ps.plan_id, ps.status, ps.terms_acceptance_id,
                 ap.code, ap.name, ap.price_cents, ap.session_limit, ap.duration_days
          FROM payment_simulations ps
          INNER JOIN access_plans ap ON ap.id = ps.plan_id
@@ -172,6 +183,10 @@ router.post(
 
       if (payment.status !== "pending") {
         throw new ApiError(409, "Cobranca nao esta pendente");
+      }
+
+      if (!payment.terms_acceptance_id) {
+        throw new ApiError(422, "Termos de Uso nao foram aceitos para esta contratacao");
       }
 
       const [passResult] = await connection.execute(

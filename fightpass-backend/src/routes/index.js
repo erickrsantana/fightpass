@@ -9,6 +9,7 @@ const evaluationRoutes = require("./modules/evaluations");
 const dashboardRoutes = require("./modules/dashboard");
 const accessRoutes = require("./modules/access");
 const dojoRoutes = require("./modules/dojo");
+const termsRoutes = require("./modules/terms");
 
 const router = express.Router();
 
@@ -26,5 +27,6 @@ router.use("/", evaluationRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/", accessRoutes);
 router.use("/dojo", dojoRoutes);
+router.use("/terms", termsRoutes);
 
 module.exports = router;
