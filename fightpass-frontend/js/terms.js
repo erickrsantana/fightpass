@@ -38,7 +38,7 @@
             <small>Versao: ${html(terms.version)}</small>
           </div>
           <label class="terms-checkbox">
-            <input type="checkbox" data-terms-accepted>
+            <input type="checkbox" data-terms-accepted required>
             <span>Li e aceito os Termos de Uso do FightPass.</span>
           </label>
         </section>

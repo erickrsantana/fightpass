@@ -1,10 +1,10 @@
 const crypto = require("crypto");
 const express = require("express");
-const { body } = require("express-validator");
+const { body, query } = require("express-validator");
 const db = require("../../database/connection");
 const env = require("../../config/env");
 const { asyncHandler, success, created, validateRequest, auth, ApiError } = require("../../lib/http");
-const { auditLog } = require("../../lib/business");
+const { auditLog, ensureInstitutionAccess } = require("../../lib/business");
 
 const router = express.Router();
 
@@ -122,6 +122,109 @@ router.post(
       await connection.commit();
 
       return success(res, { attendanceId: attendanceResult.insertId }, "Check-in confirmado com sucesso");
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  })
+);
+
+router.get(
+  "/roster",
+  auth(["institution_admin", "instructor"]),
+  [
+    query("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
+    query("date").optional().isISO8601().withMessage("Data invalida")
+  ],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    await ensureInstitutionAccess(req.user.sub, req.query.institutionId);
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const data = await db.query(
+      `SELECT b.id AS booking_id, b.booking_date, b.status AS booking_status,
+              u.id AS student_id, u.name AS student_name, u.avatar_url,
+              c.title AS class_title, m.name AS modality_name,
+              cs.day_of_week, cs.start_time, cs.end_time, cs.room_name,
+              a.id AS attendance_id, a.status AS attendance_status, a.checked_in_at
+       FROM bookings b
+       INNER JOIN users u ON u.id = b.student_id
+       INNER JOIN class_schedules cs ON cs.id = b.class_schedule_id
+       INNER JOIN classes c ON c.id = cs.class_id
+       INNER JOIN modalities m ON m.id = c.modality_id
+       LEFT JOIN attendances a ON a.booking_id = b.id AND a.student_id = b.student_id
+       WHERE c.institution_id = ?
+         AND b.booking_date = ?
+         AND b.status <> 'cancelled'
+       ORDER BY cs.start_time, c.title, u.name`,
+      [req.query.institutionId, date]
+    );
+
+    return success(res, { date, items: data }, "Chamada carregada com sucesso");
+  })
+);
+
+router.post(
+  "/manual",
+  auth(["institution_admin", "instructor"]),
+  [
+    body("bookingId").isInt({ min: 1 }).withMessage("Agendamento invalido"),
+    body("status").isIn(["present", "absent"]).withMessage("Status de presenca invalido")
+  ],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    const rows = await db.query(
+      `SELECT b.id, b.student_id, c.institution_id
+       FROM bookings b
+       INNER JOIN class_schedules cs ON cs.id = b.class_schedule_id
+       INNER JOIN classes c ON c.id = cs.class_id
+       WHERE b.id = ? AND b.status <> 'cancelled'
+       LIMIT 1`,
+      [req.body.bookingId]
+    );
+    const booking = rows[0];
+    if (!booking) {
+      throw new ApiError(404, "Agendamento nao encontrado para chamada");
+    }
+
+    await ensureInstitutionAccess(req.user.sub, booking.institution_id);
+    const connection = await db.pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+      const [existing] = await connection.execute(
+        "SELECT id FROM attendances WHERE booking_id = ? AND student_id = ? LIMIT 1",
+        [booking.id, booking.student_id]
+      );
+
+      let attendanceId = existing[0] ? existing[0].id : null;
+      if (attendanceId) {
+        await connection.execute(
+          "UPDATE attendances SET status = ?, checked_in_at = NOW() WHERE id = ?",
+          [req.body.status, attendanceId]
+        );
+      } else {
+        const [insert] = await connection.execute(
+          `INSERT INTO attendances (booking_id, student_id, checked_in_at, status)
+           VALUES (?, ?, NOW(), ?)`,
+          [booking.id, booking.student_id, req.body.status]
+        );
+        attendanceId = insert.insertId;
+      }
+
+      if (req.body.status === "present") {
+        await connection.execute("UPDATE bookings SET status = 'confirmed' WHERE id = ?", [booking.id]);
+      }
+
+      await auditLog(req.user.sub, "checkin.manual_attendance", "attendances", attendanceId, {
+        bookingId: booking.id,
+        status: req.body.status,
+        institutionId: booking.institution_id
+      }, connection);
+
+      await connection.commit();
+      return success(res, { attendanceId, status: req.body.status }, "Chamada atualizada com sucesso");
     } catch (error) {
       await connection.rollback();
       throw error;

@@ -105,7 +105,7 @@ router.get(
 
 router.post(
   "/",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   [
     body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
     body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
@@ -117,7 +117,7 @@ router.post(
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
-    await ensureInstitutionAccess(req.user.sub, req.body.institutionId);
+    await ensureInstitutionAccess(req.user.sub, req.body.institutionId, ["institution_admin"]);
     await ensureActiveInstitutionSubscription(req.body.institutionId);
     await ensureInstitutionModality(req.body.institutionId, req.body.modalityId);
 
@@ -179,7 +179,7 @@ router.post(
 
 router.put(
   "/:id",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   [
     param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
     body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
@@ -191,7 +191,7 @@ router.put(
   validateRequest,
   asyncHandler(async (req, res) => {
     const classData = await findClassForManagement(req.params.id);
-    await ensureInstitutionAccess(req.user.sub, classData.institution_id);
+    await ensureInstitutionAccess(req.user.sub, classData.institution_id, ["institution_admin"]);
     await ensureActiveInstitutionSubscription(classData.institution_id);
     await ensureInstitutionModality(classData.institution_id, req.body.modalityId);
 
@@ -223,7 +223,7 @@ router.put(
 
 router.patch(
   "/:id/status",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   [
     param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
     body("status").isIn(["active", "inactive"]).withMessage("Status invalido")
@@ -231,7 +231,7 @@ router.patch(
   validateRequest,
   asyncHandler(async (req, res) => {
     const classData = await findClassForManagement(req.params.id);
-    await ensureInstitutionAccess(req.user.sub, classData.institution_id);
+    await ensureInstitutionAccess(req.user.sub, classData.institution_id, ["institution_admin"]);
     await ensureActiveInstitutionSubscription(classData.institution_id);
 
     await db.query("UPDATE classes SET status = ? WHERE id = ?", [req.body.status, req.params.id]);
@@ -246,7 +246,7 @@ router.patch(
 
 router.post(
   "/:id/schedules",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   [
     param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
     body("dayOfWeek").isInt({ min: 0, max: 6 }).withMessage("Dia da semana invalido"),
@@ -257,7 +257,7 @@ router.post(
   validateRequest,
   asyncHandler(async (req, res) => {
     const classData = await findClassForManagement(req.params.id);
-    await ensureInstitutionAccess(req.user.sub, classData.institution_id);
+    await ensureInstitutionAccess(req.user.sub, classData.institution_id, ["institution_admin"]);
     await ensureActiveInstitutionSubscription(classData.institution_id);
 
     const startTime = normalizeTime(req.body.startTime);

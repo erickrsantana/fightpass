@@ -38,6 +38,63 @@
     return Object.fromEntries(new FormData(form).entries());
   }
 
+  function clearFieldErrors(form) {
+    if (!form) return;
+    form.querySelectorAll(".input-error").forEach((item) => item.classList.remove("input-error"));
+    form.querySelectorAll("[data-field-error]").forEach((item) => item.remove());
+  }
+
+  function applyFieldErrors(form, details) {
+    clearFieldErrors(form);
+    if (!form || !Array.isArray(details)) return;
+
+    details.forEach((detail) => {
+      const fieldName = detail.path || detail.param;
+      if (!fieldName) return;
+      const field = Array.from(form.elements).find((element) => element.name === fieldName);
+      if (!field) return;
+      field.classList.add("input-error");
+      const message = document.createElement("small");
+      message.dataset.fieldError = fieldName;
+      message.className = "field-error";
+      message.textContent = detail.msg || detail.message || "Verifique este campo.";
+      field.insertAdjacentElement("afterend", message);
+    });
+  }
+
+  function setupPasswordToggle(inputSelector, toggleSelector) {
+    const input = $(inputSelector);
+    const toggle = $(toggleSelector);
+    if (!input || !toggle) return;
+    toggle.addEventListener("change", () => {
+      input.type = toggle.checked ? "text" : "password";
+    });
+  }
+
+  function daysUntil(value) {
+    if (!value) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(value);
+    if (Number.isNaN(target.getTime())) return null;
+    target.setHours(0, 0, 0, 0);
+    return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  }
+
+  function isTomorrow(value) {
+    return daysUntil(value) === 1;
+  }
+
+  function initials(value) {
+    return String(value || "FP")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0] || "")
+      .join("")
+      .toUpperCase();
+  }
+
   function formatCurrency(cents) {
     return (Number(cents || 0) / 100).toLocaleString("pt-BR", {
       style: "currency",
@@ -71,8 +128,10 @@
     api.redirectIfAuthenticated();
     renderFlash();
     const form = $("#login-form");
+    setupPasswordToggle("#login-password", "#show-login-password");
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      clearFieldErrors(form);
       setMessage("#login-message", "Autenticando...", "loading");
       const data = formData(form);
       try {
@@ -84,6 +143,7 @@
           api.redirectByRole(response.data.user);
         }
       } catch (error) {
+        applyFieldErrors(form, error.details);
         setMessage("#login-message", error.message, "error", error.details);
       }
     });
@@ -99,15 +159,18 @@
     });
 
     function syncInstitutionField() {
+      if (!institutionGroup || !accountType) return;
       institutionGroup.hidden = accountType.value !== "institution_admin";
     }
 
-    accountType.addEventListener("change", syncInstitutionField);
+    if (accountType) accountType.addEventListener("change", syncInstitutionField);
     syncInstitutionField();
+    setupPasswordToggle("#register-password", "#show-register-password");
     await termsAcceptance.load();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      clearFieldErrors(form);
       if (!termsAcceptance.isAccepted()) {
         setMessage("#register-message", "Aceite os Termos de Uso para finalizar o cadastro.", "error");
         return;
@@ -120,7 +183,8 @@
           name: data.name,
           email: data.email,
           password: data.password,
-          accountType: data.accountType,
+          accountType: data.accountType || "student",
+          gender: data.gender || null,
           document: data.document,
           phone: data.phone || null,
           institutionName: data.institutionName || data.name,
@@ -135,6 +199,7 @@
         );
         api.redirectByRole(response.data.user);
       } catch (error) {
+        applyFieldErrors(form, error.details);
         setMessage("#register-message", error.message, "error", error.details);
       }
     });
@@ -188,9 +253,10 @@
     setMessage("#dashboard-message", "Carregando indicadores...", "loading");
     try {
       if (user.role === "student") {
-        const [response, accessResponse] = await Promise.all([
+        const [response, accessResponse, bookingsResponse] = await Promise.all([
           api.request("/dashboard/student"),
-          api.request("/access/me")
+          api.request("/access/me"),
+          api.request("/bookings")
         ]);
         setText("#metric-one-label", "Aulas agendadas");
         setText("#metric-one-value", response.data.weekly_classes ?? 0);
@@ -199,6 +265,7 @@
         setText("#metric-three-label", "Avaliação");
         setText("#metric-three-value", response.data.average_score ?? 0);
         renderAccessSummary(accessResponse.data);
+        renderStudentNotifications(bookingsResponse.data, accessResponse.data);
       } else {
         const institutionId = currentInstitutionOrStop(user, "#dashboard-message");
         if (!institutionId) return;
@@ -234,26 +301,58 @@
     const remaining = access.sessions_total === null
       ? "Ilimitado"
       : `${Math.max(0, access.sessions_total - access.sessions_used)} treino(s)`;
+    const remainingDays = daysUntil(access.expires_at);
+    const expirationWarning = remainingDays !== null && remainingDays <= 3
+      ? `<div class="notice-card warning">Seu plano vence ${remainingDays <= 0 ? "hoje" : `em ${remainingDays} dia(s)`}. Renove ou troque de plano em Planos.</div>`
+      : "";
     panel.innerHTML = `
       <h2 style="font-size: 18px; margin-bottom: 8px;">Acesso FightPass</h2>
       <p><strong>${html(access.plan_name)}</strong></p>
       <p style="color:#64748B;">Validade: ${api.formatDate(access.expires_at)} | Treinos restantes: ${remaining}</p>
+      ${expirationWarning}
       <a class="btn-secondary" style="display:inline-block; width:auto; margin-top:14px; padding:10px 18px;" href="planos.html">Ver planos</a>
     `;
+  }
+
+  function renderStudentNotifications(bookings, accessData) {
+    const panel = $("#student-notifications");
+    if (!panel) return;
+
+    const notices = [];
+    const tomorrowClasses = (bookings || []).filter((item) => item.status !== "cancelled" && isTomorrow(item.booking_date));
+    tomorrowClasses.forEach((item) => {
+      notices.push(`Amanha tem ${item.modality_name} em ${item.institution_name} as ${api.timeLabel(item.start_time)}.`);
+    });
+
+    if (accessData && accessData.hasActiveAccess) {
+      const remaining = daysUntil(accessData.access.expires_at);
+      if (remaining !== null && remaining <= 3) {
+        notices.push(`Seu plano ${accessData.access.plan_name} vence ${remaining <= 0 ? "hoje" : `em ${remaining} dia(s)`}.`);
+      }
+    }
+
+    panel.hidden = false;
+    panel.innerHTML = notices.length
+      ? `<h2 style="font-size:18px; margin-bottom:10px;">Notificacoes</h2>${notices.map((notice) => `<div class="notice-card">${html(notice)}</div>`).join("")}`
+      : `<h2 style="font-size:18px; margin-bottom:10px;">Notificacoes</h2><div class="empty-state">Nenhum aviso importante para hoje.</div>`;
   }
 
   async function initMapa() {
     const user = await api.requireAuth();
     if (!user) return;
-    let selectedModality = "";
+    let selectedModalities = [];
     let institutions = [];
+    let userCoordinates = null;
     const searchInput = $("#map-search");
+    const nearInput = $("#near-address");
+    const locateButton = $("#use-location");
     const modalityList = $("#modality-list");
     const institutionList = $("#institution-list");
     const details = $("#institution-details");
     const mapElement = $("#map-view");
     let map = null;
     let markerLayer = null;
+    let searchTimer = null;
 
     function numericCoordinate(value) {
       const coordinate = Number(value);
@@ -262,6 +361,23 @@
 
     function hasCoordinates(item) {
       return numericCoordinate(item.latitude) !== null && numericCoordinate(item.longitude) !== null;
+    }
+
+    function syncSelectedModalities() {
+      selectedModalities = $all("[data-modality-filter]:checked").map((item) => item.value);
+    }
+
+    function scheduleLink(item, scheduleId) {
+      const params = new URLSearchParams({
+        institutionId: item.id,
+        scheduleId
+      });
+      return `agendar.html?${params.toString()}`;
+    }
+
+    function debouncedLoadInstitutions() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadInstitutions, 250);
     }
 
     function initMap() {
@@ -286,16 +402,26 @@
         const item = response.data;
         const address = item.formatted_address
           || [item.street, item.number, item.neighborhood, item.city, item.state, item.zip_code].filter(Boolean).join(", ");
+        const classes = item.classes || [];
         details.innerHTML = `
           <h2>${html(item.name)}</h2>
           <p>${html(item.description || "Sem descrição cadastrada.")}</p>
           <p><strong>Contato:</strong> ${html(item.email || "-")} ${html(item.phone || "")}</p>
           <p><strong>Endereço:</strong> ${html(address || "Endereço não cadastrado.")}</p>
           <p><strong>Localização:</strong> ${hasCoordinates(item) ? `${html(item.latitude)}, ${html(item.longitude)}` : "Coordenadas pendentes para este CEP."}</p>
+          ${item.modalities && item.modalities.length ? `<div class="chip-row">${item.modalities.map((modality) => `<span class="badge-modalidade">${html(modality.name)}</span>`).join("")}</div>` : ""}
           <h3>Turmas vinculadas</h3>
-          ${item.classes.length ? `<ul class="simple-list">${item.classes.map((classItem) => `
-            <li>${html(classItem.title)} - ${html(classItem.modality_name)} (${api.dayLabel(classItem.day_of_week)} ${api.timeLabel(classItem.start_time)})</li>
+          ${classes.length ? `<ul class="simple-list">${classes.map((classItem) => `
+            <li>
+              <strong>${html(classItem.title)}</strong> - ${html(classItem.modality_name)}
+              (${api.dayLabel(classItem.day_of_week)} ${api.timeLabel(classItem.start_time)})
+              <a href="${scheduleLink(item, classItem.schedule_id)}">Reservar</a>
+            </li>
           `).join("")}</ul>` : `<div class="empty-state">Nenhuma turma ativa vinculada.</div>`}
+          <div class="button-row" style="margin-top:18px;">
+            <a class="btn-primary" style="width:auto; padding:10px 18px;" href="agendar.html?institutionId=${html(item.id)}">Ver agenda</a>
+            <a class="btn-secondary" style="width:auto; padding:10px 18px;" href="checkin.html">Fazer check-in</a>
+          </div>
         `;
 
         $all(".result-card").forEach((card) => {
@@ -335,8 +461,13 @@
     async function loadInstitutions() {
       setMessage("#map-message", "Carregando academias...", "loading");
       const params = new URLSearchParams();
-      if (selectedModality) params.set("modality", selectedModality);
+      if (selectedModalities.length) params.set("modalities", selectedModalities.join(","));
       if (searchInput.value) params.set("search", searchInput.value);
+      if (nearInput && nearInput.value) params.set("near", nearInput.value);
+      if (userCoordinates) {
+        params.set("lat", userCoordinates.lat);
+        params.set("lng", userCoordinates.lng);
+      }
       try {
         const response = await api.request(`/map/search?${params.toString()}`);
         institutions = response.data;
@@ -347,7 +478,7 @@
             <button class="result-card" data-id="${item.id}">
               <strong>${html(item.name)}</strong>
               <span>${html([item.neighborhood, item.city, item.state].filter(Boolean).join(" - "))}</span>
-              <small>${hasCoordinates(item) ? "Localização disponível no mapa" : "Coordenadas pendentes para este CEP"}</small>
+              <small>${item.distance_km !== null && item.distance_km !== undefined ? `${html(item.distance_km)} km de voce` : hasCoordinates(item) ? "Localizacao disponivel no mapa" : "Coordenadas pendentes para este CEP"}</small>
             </button>
           `).join("");
         }
@@ -358,11 +489,19 @@
       }
     }
 
+    modalityList.addEventListener("change", (event) => {
+      if (!event.target.matches("[data-modality-filter]")) return;
+      syncSelectedModalities();
+      loadInstitutions();
+    });
+
     modalityList.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-slug]");
-      if (!button) return;
-      selectedModality = button.dataset.slug;
-      $all("[data-slug]").forEach((item) => item.classList.toggle("active-filter", item === button));
+      const clearButton = event.target.closest("[data-clear-modalities]");
+      if (!clearButton) return;
+      $all("[data-modality-filter]").forEach((item) => {
+        item.checked = false;
+      });
+      syncSelectedModalities();
       loadInstitutions();
     });
 
@@ -372,15 +511,42 @@
       await loadInstitutionDetails(button.dataset.id);
     });
 
-    searchInput.addEventListener("input", () => loadInstitutions());
+    searchInput.addEventListener("input", debouncedLoadInstitutions);
+    if (nearInput) nearInput.addEventListener("input", debouncedLoadInstitutions);
+    if (locateButton) {
+      locateButton.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+          setMessage("#map-message", "Seu navegador nao disponibilizou localizacao.", "error");
+          return;
+        }
+
+        setMessage("#map-message", "Obtendo sua localizacao...", "loading");
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            userCoordinates = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            loadInstitutions();
+          },
+          () => setMessage("#map-message", "Nao foi possivel obter sua localizacao. Digite um bairro ou endereco.", "error"),
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      });
+    }
 
     try {
       initMap();
       const response = await api.request("/modalities");
-      modalityList.innerHTML = [
-        `<button class="filter-button active-filter" data-slug="">Todas</button>`,
-        ...response.data.map((item) => `<button class="filter-button" data-slug="${html(item.slug)}">${html(item.name)}</button>`)
-      ].join("");
+      modalityList.innerHTML = `
+        ${response.data.map((item) => `
+          <label class="filter-check">
+            <input type="checkbox" value="${html(item.slug)}" data-modality-filter>
+            <span>${html(item.name)}</span>
+          </label>
+        `).join("")}
+        <button class="filter-button" type="button" data-clear-modalities>Limpar filtros</button>
+      `;
       await loadInstitutions();
     } catch (error) {
       setMessage("#map-message", error.message, "error", error.details);
@@ -395,6 +561,9 @@
     const recurring = $("#is-recurring");
     const endDate = $("#end-date");
     const preview = $("#schedule-preview");
+    const params = new URLSearchParams(window.location.search);
+    const requestedInstitutionId = params.get("institutionId");
+    const requestedScheduleId = params.get("scheduleId");
     let schedules = [];
 
     function dateMatchesSelectedSchedule(value) {
@@ -431,7 +600,9 @@
 
     setMessage("#booking-message", "Carregando turmas...", "loading");
     try {
-      const response = await api.request("/classes");
+      const classParams = new URLSearchParams();
+      if (requestedInstitutionId) classParams.set("institutionId", requestedInstitutionId);
+      const response = await api.request(`/classes${classParams.toString() ? `?${classParams.toString()}` : ""}`);
       schedules = response.data.flatMap((classItem) => (classItem.schedules || []).map((schedule) => ({
         ...classItem,
         schedule
@@ -443,10 +614,13 @@
         return;
       }
       scheduleSelect.innerHTML = schedules.map((item) => `
-        <option value="${item.schedule.id}">
+        <option value="${item.schedule.id}" ${String(item.schedule.id) === requestedScheduleId ? "selected" : ""}>
           ${html(item.institution_name)} - ${html(item.title)} - ${html(item.modality_name)} (${api.dayLabel(item.schedule.day_of_week)} ${api.timeLabel(item.schedule.start_time)})
         </option>
       `).join("");
+      if (requestedScheduleId && !schedules.some((item) => String(item.schedule.id) === requestedScheduleId)) {
+        scheduleSelect.selectedIndex = 0;
+      }
       renderPreview();
       syncSelectedSchedule();
       setMessage("#booking-message", "", "info");
@@ -505,6 +679,14 @@
       setMessage("#my-classes-message", "Carregando aulas...", "loading");
       try {
         const response = await api.request("/bookings");
+        const reminders = $("#class-reminders");
+        if (reminders) {
+          const tomorrowClasses = response.data.filter((item) => item.status !== "cancelled" && isTomorrow(item.booking_date));
+          reminders.hidden = false;
+          reminders.innerHTML = tomorrowClasses.length
+            ? tomorrowClasses.map((item) => `<div class="notice-card">Lembrete: amanha voce tem ${html(item.modality_name)} em ${html(item.institution_name)} as ${api.timeLabel(item.start_time)}.</div>`).join("")
+            : `<div class="empty-state">Nenhuma aula marcada para amanha.</div>`;
+        }
         tbody.innerHTML = response.data.length ? response.data.map((item) => `
           <tr>
             <td>${api.formatDate(item.booking_date)}</td>
@@ -592,17 +774,71 @@
   async function initPerfil() {
     const user = await api.requireAuth();
     if (!user) return;
+    setupPasswordToggle("#current-password", "#show-current-password");
+    setupPasswordToggle("#profile-new-password", "#show-new-password");
+    setupPasswordToggle("#profile-confirm-password", "#show-confirm-password");
+
+    function renderProfilePhoto(profile) {
+      const preview = $("#profile-photo-preview");
+      if (!preview) return;
+      const avatarUrl = profile.avatar_url || profile.avatarUrl;
+      preview.innerHTML = avatarUrl
+        ? `<img src="${html(avatarUrl)}" alt="Foto de ${html(profile.name)}">`
+        : `<span>${html(initials(profile.name))}</span>`;
+    }
+
+    function renderProfileAccess(accessData) {
+      const panel = $("#profile-access");
+      if (!panel) return;
+      if (user.role !== "student") {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+
+      if (!accessData || !accessData.hasActiveAccess) {
+        panel.innerHTML = `
+          <h2 style="font-size: 20px; margin-bottom: 12px;">Plano do aluno</h2>
+          <p style="color:#991B1B;">Sem plano ativo no momento.</p>
+          <a class="btn-primary" style="display:inline-block; width:auto; margin-top:14px; padding:10px 18px;" href="planos.html">Ver planos</a>
+        `;
+        return;
+      }
+
+      const access = accessData.access;
+      const remaining = access.sessions_total === null
+        ? "Ilimitado"
+        : `${Math.max(0, access.sessions_total - access.sessions_used)} treino(s)`;
+      const remainingDays = daysUntil(access.expires_at);
+      panel.innerHTML = `
+        <h2 style="font-size: 20px; margin-bottom: 12px;">Plano do aluno</h2>
+        <p><strong>${html(access.plan_name)}</strong></p>
+        <p style="color:#64748B;">Valido ate ${api.formatDate(access.expires_at)} | Treinos restantes: ${remaining}</p>
+        ${remainingDays !== null && remainingDays <= 3 ? `<div class="notice-card warning">Seu plano vence ${remainingDays <= 0 ? "hoje" : `em ${remainingDays} dia(s)`}.</div>` : ""}
+        <div class="button-row" style="margin-top:14px;">
+          <a class="btn-secondary" style="width:auto; padding:10px 18px;" href="planos.html">Trocar plano</a>
+          <button class="btn-cancel" type="button" data-cancel-access="${access.id}">Cancelar plano</button>
+        </div>
+      `;
+    }
 
     async function loadProfile() {
       setMessage("#profile-message", "Carregando perfil...", "loading");
       try {
-        const response = await api.request("/profile");
+        const [response, accessResponse] = await Promise.all([
+          api.request("/profile"),
+          user.role === "student" ? api.request("/access/me") : Promise.resolve({ data: null })
+        ]);
         const profile = response.data;
         $("#profile-name").value = profile.name || "";
         $("#profile-email").value = profile.email || "";
         $("#profile-phone").value = profile.phone || "";
+        if ($("#profile-gender")) $("#profile-gender").value = profile.gender || "";
+        if ($("#profile-avatar-url")) $("#profile-avatar-url").value = profile.avatar_url || profile.avatarUrl || "";
         $("#profile-document").value = profile.document || "";
         $("#profile-role").value = api.roleLabel(profile.role);
+        renderProfilePhoto(profile);
+        renderProfileAccess(accessResponse.data);
         setMessage("#profile-message", "", "info");
       } catch (error) {
         setMessage("#profile-message", error.message, "error", error.details);
@@ -611,22 +847,48 @@
 
     $("#profile-form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      clearFieldErrors(event.currentTarget);
       setMessage("#profile-message", "Salvando perfil...", "loading");
       const data = formData(event.currentTarget);
       try {
         const response = await api.request("/profile", {
           method: "PUT",
-          body: { name: data.name, phone: data.phone, document: data.document }
+          body: {
+            name: data.name,
+            phone: data.phone,
+            document: data.document,
+            gender: data.gender || null,
+            avatarUrl: data.avatarUrl || null
+          }
         });
-        localStorage.setItem("fightpass.user", JSON.stringify(response.data));
+        api.saveSession({ user: response.data });
+        renderProfilePhoto(response.data);
         setMessage("#profile-message", response.message, "success");
       } catch (error) {
+        applyFieldErrors(event.currentTarget, error.details);
         setMessage("#profile-message", error.message, "error", error.details);
       }
     });
 
+    const accessPanel = $("#profile-access");
+    if (accessPanel) {
+      accessPanel.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-cancel-access]");
+        if (!button) return;
+        setMessage("#profile-message", "Cancelando plano...", "loading");
+        try {
+          const response = await api.cancelAccess(Number(button.dataset.cancelAccess));
+          setMessage("#profile-message", response.message, "success");
+          await loadProfile();
+        } catch (error) {
+          setMessage("#profile-message", error.message, "error", error.details);
+        }
+      });
+    }
+
     $("#password-form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      clearFieldErrors(event.currentTarget);
       setMessage("#password-message", "Alterando senha...", "loading");
       const data = formData(event.currentTarget);
       try {
@@ -641,6 +903,7 @@
         event.currentTarget.reset();
         setMessage("#password-message", response.message, "success");
       } catch (error) {
+        applyFieldErrors(event.currentTarget, error.details);
         setMessage("#password-message", error.message, "error", error.details);
       }
     });
@@ -653,15 +916,27 @@
     if (!user) return;
     const institutionId = currentInstitutionOrStop(user, "#management-message");
     if (!institutionId) return;
+    const isAdmin = user.role === "institution_admin";
     const tbody = $("#students-table");
     const classesTable = $("#dojo-classes-table");
     const classForm = $("#dojo-class-form");
     const addressForm = $("#dojo-address-form");
     const addressPreview = $("#dojo-address-preview");
     const subscriptionPanel = $("#dojo-subscription");
+    const attendanceDate = $("#attendance-date");
+    const attendanceTable = $("#attendance-table");
+
+    $all("[data-admin-only]").forEach((item) => {
+      item.hidden = !isAdmin;
+    });
+    if (attendanceDate) attendanceDate.value = new Date().toISOString().slice(0, 10);
 
     function renderSubscription(subscription) {
       if (!subscriptionPanel) return;
+      if (!isAdmin) {
+        subscriptionPanel.hidden = true;
+        return;
+      }
       const price = formatCurrency(subscription.price_cents || subscription.monthly_fee_cents || 6900);
       const isActive = subscription.status === "active";
       subscriptionPanel.innerHTML = `
@@ -692,12 +967,38 @@
           <td>${(item.schedules || []).map((schedule) => `${api.dayLabel(schedule.day_of_week)} ${api.timeLabel(schedule.start_time)}-${api.timeLabel(schedule.end_time)}`).join("<br>") || "-"}</td>
           <td>${item.status === "active" ? "Ativa" : "Inativa"}</td>
           <td>
-            <button class="btn-secondary" style="width:auto; padding:8px 12px;" data-class-status="${item.id}" data-next-status="${item.status === "active" ? "inactive" : "active"}">
+            ${isAdmin ? `<button class="btn-secondary" style="width:auto; padding:8px 12px;" data-class-status="${item.id}" data-next-status="${item.status === "active" ? "inactive" : "active"}">
               ${item.status === "active" ? "Inativar" : "Ativar"}
-            </button>
+            </button>` : "-"}
           </td>
         </tr>
       `).join("") : `<tr><td colspan="5">Nenhuma aula cadastrada.</td></tr>`;
+    }
+
+    async function loadRoster() {
+      if (!attendanceTable || !attendanceDate) return;
+      try {
+        const params = new URLSearchParams({
+          institutionId,
+          date: attendanceDate.value
+        });
+        const response = await api.request(`/checkin/roster?${params.toString()}`);
+        const items = response.data.items || [];
+        attendanceTable.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${html(item.student_name)}</td>
+            <td>${html(item.class_title)}<br><small>${html(item.modality_name)}</small></td>
+            <td>${api.dayLabel(item.day_of_week)} ${api.timeLabel(item.start_time)}-${api.timeLabel(item.end_time)}</td>
+            <td>${html(api.statusLabel(item.attendance_status || "pending"))}</td>
+            <td>
+              <button class="btn-secondary" style="width:auto; padding:8px 12px;" data-attendance-booking="${item.booking_id}" data-attendance-status="present">Presente</button>
+              <button class="btn-cancel" type="button" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">Ausente</button>
+            </td>
+          </tr>
+        `).join("") : `<tr><td colspan="5">Nenhuma aula agendada para a data selecionada.</td></tr>`;
+      } catch (error) {
+        setMessage("#management-message", error.message, "error", error.details);
+      }
     }
 
     async function loadDojoData() {
@@ -710,38 +1011,41 @@
       renderSubscription(subscription.data);
       renderAddress(institution.data);
       renderClasses(classes.data);
-      $("#class-modality").innerHTML = institution.data.modalities.map((item) => `
-        <option value="${item.id}">${html(item.name)}</option>
-      `).join("");
+      if (isAdmin && $("#class-modality")) {
+        $("#class-modality").innerHTML = institution.data.modalities.map((item) => `
+          <option value="${item.id}">${html(item.name)}</option>
+        `).join("");
+      }
     }
 
     setMessage("#management-message", "Carregando gestão...", "loading");
     try {
-      const [dashboard, students] = await Promise.all([
-        api.request(`/dashboard/institution/${institutionId}`),
-        api.request(`/institutions/${institutionId}/students`)
-      ]);
-      setText("#active-students", dashboard.data.active_students ?? 0);
-      setText("#attendance-rate", `${dashboard.data.attendance_rate ?? 0}%`);
-      setText("#risk-rate", `${dashboard.data.dropout_risk_rate ?? 0}%`);
+      const studentsRequest = api.request(`/institutions/${institutionId}/students`);
+      const dashboard = isAdmin ? await api.request(`/dashboard/institution/${institutionId}`) : null;
+      const students = await studentsRequest;
+      if (dashboard) {
+        setText("#active-students", dashboard.data.active_students ?? 0);
+        setText("#attendance-rate", `${dashboard.data.attendance_rate ?? 0}%`);
+        setText("#risk-rate", `${dashboard.data.dropout_risk_rate ?? 0}%`);
+      }
       tbody.innerHTML = students.data.length ? students.data.map((student) => `
         <tr>
           <td>${html(student.name)}</td>
           <td>${html(student.modality_name)}</td>
           <td>${html(api.statusLabel(student.enrollment_status))}</td>
           <td>
-            <a href="perfil-aluno.html?id=${student.id}">Ver perfil</a>
-            <a href="avaliar-aluno.html?id=${student.id}" style="margin-left: 12px;">Avaliar</a>
+            ${isAdmin ? `<a href="perfil-aluno.html?id=${student.id}">Ver perfil</a><a href="avaliar-aluno.html?id=${student.id}" style="margin-left: 12px;">Avaliar</a>` : "Aluno ativo"}
           </td>
         </tr>
       `).join("") : `<tr><td colspan="4">Nenhum aluno ativo encontrado.</td></tr>`;
       await loadDojoData();
+      await loadRoster();
       setMessage("#management-message", "", "info");
     } catch (error) {
       setMessage("#management-message", error.message, "error", error.details);
     }
 
-    if (addressForm) {
+    if (isAdmin && addressForm) {
       addressForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         setMessage("#management-message", "Atualizando endereço...", "loading");
@@ -759,7 +1063,7 @@
       });
     }
 
-    if (classForm) {
+    if (isAdmin && classForm) {
       classForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         setMessage("#management-message", "Criando aula...", "loading");
@@ -789,7 +1093,7 @@
       });
     }
 
-    if (classesTable) {
+    if (isAdmin && classesTable) {
       classesTable.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-class-status]");
         if (!button) return;
@@ -806,10 +1110,35 @@
         }
       });
     }
+
+    if (attendanceDate) {
+      attendanceDate.addEventListener("change", loadRoster);
+    }
+
+    if (attendanceTable) {
+      attendanceTable.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-attendance-booking]");
+        if (!button) return;
+        setMessage("#management-message", "Atualizando chamada...", "loading");
+        try {
+          const response = await api.request("/checkin/manual", {
+            method: "POST",
+            body: {
+              bookingId: Number(button.dataset.attendanceBooking),
+              status: button.dataset.attendanceStatus
+            }
+          });
+          await loadRoster();
+          setMessage("#management-message", response.message, "success");
+        } catch (error) {
+          setMessage("#management-message", error.message, "error", error.details);
+        }
+      });
+    }
   }
 
   async function initPerfilAluno() {
-    const user = await api.requireAuth(["institution_admin", "instructor"]);
+    const user = await api.requireAuth(["institution_admin"]);
     if (!user) return;
     const studentId = new URLSearchParams(window.location.search).get("id");
     if (!studentId) {
@@ -828,6 +1157,15 @@
       setText("#student-modality", profile.data.modality_name || "-");
       setText("#student-attendance", `${profile.data.attendance_rate ?? 0}%`);
       setText("#student-score", profile.data.average_score ?? 0);
+      setText("#student-gender", api.genderLabel(profile.data.gender));
+      setText("#student-plan", profile.data.plan_name || "Sem plano ativo");
+      setText("#student-plan-expiration", profile.data.plan_expires_at ? api.formatDate(profile.data.plan_expires_at) : "-");
+      const avatar = $("#student-avatar");
+      if (avatar) {
+        avatar.innerHTML = profile.data.avatar_url
+          ? `<img src="${html(profile.data.avatar_url)}" alt="Foto de ${html(profile.data.name)}">`
+          : `<span>${html(initials(profile.data.name))}</span>`;
+      }
       $("#evaluate-link").href = `avaliar-aluno.html?id=${studentId}`;
       $("#progress-list").innerHTML = progress.data.length ? progress.data.map((item) => `
         <div class="timeline-row">
@@ -849,7 +1187,7 @@
   }
 
   async function initAvaliarAluno() {
-    const user = await api.requireAuth(["institution_admin", "instructor"]);
+    const user = await api.requireAuth(["institution_admin"]);
     if (!user) return;
     const institutionId = currentInstitutionOrStop(user, "#evaluation-message");
     if (!institutionId) return;
@@ -932,6 +1270,15 @@
 
       function renderDojoPayment(payment) {
         paymentResult.hidden = false;
+        if (payment.method !== "pix" && payment.method !== "boleto") {
+          paymentResult.innerHTML = `
+            <h2 style="font-size:18px; margin-bottom:8px;">${html(api.paymentMethodLabel(payment.method))} DOJO gerado</h2>
+            <p style="color:#64748B;">${html(payment.prototypeNotice)}</p>
+            <div class="token-box" style="margin-top:16px;">${html(payment.referenceCode)}</div>
+            <button class="btn-primary" style="width:auto; margin-top:16px; padding:12px 24px;" data-confirm-dojo-payment="${payment.id}">Confirmar pagamento ficticio</button>
+          `;
+          return;
+        }
         paymentResult.innerHTML = payment.method === "pix" ? `
           <h2 style="font-size:18px; margin-bottom:8px;">Pix DOJO gerado</h2>
           <p style="color:#64748B;">${html(payment.prototypeNotice)}</p>
@@ -958,6 +1305,7 @@
             <p style="color:#64748B; min-height:54px;">${html(plan.description)}</p>
             <strong style="font-size:28px; color:var(--primary-blue);">${formatCurrency(plan.priceCents)}</strong>
             <small style="color:#64748B;">Mensalidade para DOJO parceiro</small>
+            ${plan.features && plan.features.length ? `<ul class="plan-features">${plan.features.map((feature) => `<li>${html(feature)}</li>`).join("")}</ul>` : ""}
             <button class="btn-primary" type="button" data-dojo-plan-id="${plan.id}">Gerar mensalidade</button>
           </article>
         `).join("");
@@ -1024,10 +1372,13 @@
         const remaining = access.sessions_total === null
           ? "Ilimitado"
           : `${Math.max(0, access.sessions_total - access.sessions_used)} treino(s)`;
+        const remainingDays = daysUntil(access.expires_at);
         currentAccess.innerHTML = `
           <h2 style="font-size: 18px; margin-bottom: 8px;">Acesso atual</h2>
           <p><strong>${html(access.plan_name)}</strong></p>
           <p style="color:#64748B;">Validade: ${api.formatDate(access.expires_at)} | Treinos restantes: ${remaining}</p>
+          ${remainingDays !== null && remainingDays <= 3 ? `<div class="notice-card warning">Seu plano vence ${remainingDays <= 0 ? "hoje" : `em ${remainingDays} dia(s)`}.</div>` : ""}
+          <button class="btn-cancel" type="button" data-cancel-access="${access.id}" style="margin-top:14px;">Cancelar plano</button>
         `;
       } catch (error) {
         currentAccess.innerHTML = `<p style="color:#991B1B;">${html(error.message)}</p>`;
@@ -1049,6 +1400,16 @@
         return;
       }
 
+      if (payment.method !== "boleto") {
+        paymentResult.innerHTML = `
+          <h2 style="font-size: 18px; margin-bottom: 8px;">${html(api.paymentMethodLabel(payment.method))} gerado</h2>
+          <p style="color:#64748B;">${html(payment.prototypeNotice)}</p>
+          <div class="token-box" style="margin-top:16px;">${html(payment.referenceCode)}</div>
+          <button class="btn-primary" style="width:auto; margin-top:16px; padding:12px 24px;" data-confirm-payment="${payment.id}">Confirmar pagamento ficticio</button>
+        `;
+        return;
+      }
+
       paymentResult.innerHTML = `
         <h2 style="font-size: 18px; margin-bottom: 8px;">Boleto gerado</h2>
         <p style="color:#64748B;">${html(payment.prototypeNotice)}</p>
@@ -1061,19 +1422,33 @@
     try {
       await loadAccess();
       const response = await api.request("/plans");
-      plansList.innerHTML = response.data.map((plan) => `
+      plansList.innerHTML = response.data.length ? response.data.map((plan) => `
         <article class="card-white" style="display:flex; flex-direction:column; gap:12px;">
           <h2 style="font-size:20px;">${html(plan.name)}</h2>
           <p style="color:#64748B; min-height:54px;">${html(plan.description)}</p>
           <strong style="font-size:28px; color:var(--primary-blue);">${formatCurrency(plan.priceCents)}</strong>
           <small style="color:#64748B;">${plan.sessionLimit === null ? "Treinos ilimitados" : `${plan.sessionLimit} treino(s)`} por ${plan.durationDays} dias</small>
+          ${plan.features && plan.features.length ? `<ul class="plan-features">${plan.features.map((feature) => `<li>${html(feature)}</li>`).join("")}</ul>` : ""}
           <button class="btn-primary" type="button" data-plan-id="${plan.id}">Contratar</button>
         </article>
-      `).join("");
+      `).join("") : `<div class="empty-state">Nenhum plano disponivel no momento.</div>`;
       setMessage("#plans-message", "", "info");
     } catch (error) {
       setMessage("#plans-message", error.message, "error", error.details);
     }
+
+    currentAccess.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-cancel-access]");
+      if (!button) return;
+      setMessage("#plans-message", "Cancelando plano...", "loading");
+      try {
+        const response = await api.cancelAccess(Number(button.dataset.cancelAccess));
+        setMessage("#plans-message", response.message, "success");
+        await loadAccess();
+      } catch (error) {
+        setMessage("#plans-message", error.message, "error", error.details);
+      }
+    });
 
     plansList.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-plan-id]");

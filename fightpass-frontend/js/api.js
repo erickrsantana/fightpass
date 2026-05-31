@@ -57,6 +57,26 @@
     }[role] || "Usuário";
   }
 
+  function genderLabel(gender) {
+    return {
+      female: "Feminino",
+      male: "Masculino",
+      non_binary: "Nao binario",
+      prefer_not_to_say: "Prefiro nao informar",
+      other: "Outro"
+    }[gender] || "-";
+  }
+
+  function paymentMethodLabel(method) {
+    return {
+      pix: "Pix",
+      boleto: "Boleto",
+      credit_card: "Cartao de credito",
+      debit_card: "Cartao de debito",
+      transfer: "Transferencia"
+    }[method] || method || "-";
+  }
+
   function statusLabel(status) {
     return {
       active: "Ativo",
@@ -214,6 +234,7 @@
     request,
     login: (email, password) => request("/auth/login", { method: "POST", body: { email, password } }),
     register: (payload) => request("/auth/register", { method: "POST", body: payload }),
+    cancelAccess: (accessPassId) => request("/access/cancel", { method: "POST", body: { accessPassId } }),
     forgotPassword: (email) => request("/auth/forgot-password", { method: "POST", body: { email } }),
     resetPassword: (token, password) => request("/auth/reset-password", { method: "POST", body: { token, password } }),
     me,
@@ -226,6 +247,8 @@
     setFlash,
     consumeFlash,
     roleLabel,
+    genderLabel,
+    paymentMethodLabel,
     statusLabel,
     riskLabel,
     geocodingStatusLabel,

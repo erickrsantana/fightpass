@@ -18,6 +18,18 @@ const {
 const { ensureTermsAccepted } = require("../../services/termsService");
 
 const router = express.Router();
+const PAYMENT_METHODS = ["pix", "boleto", "credit_card", "debit_card", "transfer"];
+
+function parseFeatures(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
 
 function serializePlan(plan) {
   return {
@@ -28,13 +40,14 @@ function serializePlan(plan) {
     priceCents: plan.price_cents,
     price: Number(plan.price_cents / 100).toFixed(2),
     sessionLimit: plan.session_limit,
-    durationDays: plan.duration_days
+    durationDays: plan.duration_days,
+    features: parseFeatures(plan.features_json)
   };
 }
 
 async function findPlan(planId) {
   const rows = await db.query(
-    `SELECT id, code, name, description, price_cents, session_limit, duration_days, is_active
+    `SELECT id, code, name, description, price_cents, session_limit, duration_days, features_json, is_active
      FROM access_plans
      WHERE id = ? AND is_active = 1
      LIMIT 1`,
@@ -48,7 +61,7 @@ router.get(
   auth(["student"]),
   asyncHandler(async (req, res) => {
     const rows = await db.query(
-      `SELECT id, code, name, description, price_cents, session_limit, duration_days
+      `SELECT id, code, name, description, price_cents, session_limit, duration_days, features_json
        FROM access_plans
        WHERE is_active = 1 AND code <> 'trial_1_day'
        ORDER BY price_cents`
@@ -83,11 +96,46 @@ router.get(
 );
 
 router.post(
+  "/access/cancel",
+  auth(["student"]),
+  [body("accessPassId").optional().isInt({ min: 1 }).withMessage("Plano invalido")],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    const params = [req.user.sub];
+    const idFilter = req.body.accessPassId ? "AND sap.id = ?" : "";
+    if (req.body.accessPassId) params.push(req.body.accessPassId);
+
+    const rows = await db.query(
+      `SELECT sap.id, ap.name AS plan_name
+       FROM student_access_passes sap
+       INNER JOIN access_plans ap ON ap.id = sap.plan_id
+       WHERE sap.student_id = ?
+         AND sap.status = 'active'
+         AND sap.expires_at > NOW()
+         ${idFilter}
+       ORDER BY sap.expires_at DESC, sap.id DESC
+       LIMIT 1`,
+      params
+    );
+
+    const pass = rows[0];
+    if (!pass) {
+      throw new ApiError(404, "Nenhum plano ativo encontrado para cancelar");
+    }
+
+    await db.query("UPDATE student_access_passes SET status = 'cancelled' WHERE id = ?", [pass.id]);
+    await auditLog(req.user.sub, "access.cancel", "student_access_passes", pass.id);
+
+    return success(res, { accessPassId: pass.id }, `Plano ${pass.plan_name} cancelado com sucesso`);
+  })
+);
+
+router.post(
   "/payments/simulate",
   auth(["student"]),
   [
     body("planId").isInt({ min: 1 }).withMessage("Plano invalido"),
-    body("method").isIn(["pix", "boleto"]).withMessage("Metodo de pagamento invalido")
+    body("method").isIn(PAYMENT_METHODS).withMessage("Metodo de pagamento invalido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -120,6 +168,9 @@ router.post(
         ? buildPixCode({ paymentId, amountCents: plan.price_cents })
         : null;
       const boletoCode = req.body.method === "boleto" ? buildBoletoCode(paymentId) : null;
+      const referenceCode = ["credit_card", "debit_card", "transfer"].includes(req.body.method)
+        ? `FP-${req.body.method.toUpperCase().replace("_", "-")}-${String(paymentId).padStart(8, "0")}`
+        : null;
 
       await connection.execute(
         "UPDATE payment_simulations SET pix_code = ?, boleto_code = ? WHERE id = ?",
@@ -143,6 +194,7 @@ router.post(
         status: "pending",
         pixCode,
         boletoCode,
+        referenceCode,
         prototypeNotice: "Pagamento ficticio para demonstracao academica. Nenhuma cobranca real foi gerada."
       }, "Cobranca gerada com sucesso");
     } catch (error) {

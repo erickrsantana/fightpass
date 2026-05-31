@@ -6,14 +6,14 @@
     <title>FightPass - Login</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="light-theme" data-page="login">
+<body class="light-theme auth-page" data-page="login">
     <div class="search-bar-top">
         <div class="logo">FightPass</div>
         <input type="text" class="search-input" placeholder="Pesquisar academia, modalidade ou aluno">
     </div>
 
     <div class="login-container">
-        <form class="card-white" id="login-form" style="width: 420px;">
+        <form class="card-white auth-card" id="login-form">
             <h1 style="margin-bottom: 5px;">Entrar</h1>
             <p style="color: #64748B; margin-bottom: 25px; font-size: 14px;">Faça login para acessar o FightPass.</p>
             <div data-flash hidden></div>
@@ -27,6 +27,10 @@
             <div class="input-group">
                 <label for="login-password">Senha</label>
                 <input id="login-password" name="password" type="password" class="input-field" placeholder="Digite sua senha" required>
+                <label class="inline-check" for="show-login-password">
+                    <input id="show-login-password" type="checkbox">
+                    <span>Mostrar senha digitada</span>
+                </label>
             </div>
 
             <button class="btn-primary" type="submit">Entrar</button>

@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.get(
   "/students/:id/evaluations",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   asyncHandler(async (req, res) => {
     const institutionId = await findSharedInstitution(req.params.id, req.user.sub);
     const data = await db.query(
@@ -34,7 +34,7 @@ router.get(
 
 router.post(
   "/students/:id/evaluations",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   [
     body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
     body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
@@ -70,12 +70,27 @@ router.post(
 
 router.get(
   "/students/:id/profile",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   asyncHandler(async (req, res) => {
     const institutionId = await findSharedInstitution(req.params.id, req.user.sub);
     const rows = await db.query(
-      `SELECT u.id, u.name, u.email,
+      `SELECT u.id, u.name, u.email, u.gender, u.avatar_url,
               m.name AS modality_name,
+              (
+                SELECT ap.name
+                FROM student_access_passes sap
+                INNER JOIN access_plans ap ON ap.id = sap.plan_id
+                WHERE sap.student_id = u.id AND sap.status = 'active' AND sap.expires_at > NOW()
+                ORDER BY sap.expires_at DESC, sap.id DESC
+                LIMIT 1
+              ) AS plan_name,
+              (
+                SELECT sap.expires_at
+                FROM student_access_passes sap
+                WHERE sap.student_id = u.id AND sap.status = 'active' AND sap.expires_at > NOW()
+                ORDER BY sap.expires_at DESC, sap.id DESC
+                LIMIT 1
+              ) AS plan_expires_at,
               COALESCE(ROUND(AVG(e.score), 2), 0) AS average_score,
               COALESCE(ROUND(AVG(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) * 100, 2), 0) AS attendance_rate
        FROM users u
@@ -84,7 +99,7 @@ router.get(
        LEFT JOIN student_evaluations e ON e.student_user_id = u.id
        LEFT JOIN attendances a ON a.student_id = u.id
        WHERE u.id = ?
-       GROUP BY u.id, u.name, u.email, m.name`,
+       GROUP BY u.id, u.name, u.email, u.gender, u.avatar_url, m.name`,
       [institutionId, req.params.id]
     );
 
@@ -99,7 +114,7 @@ router.get(
 
 router.get(
   "/students/:id/progress",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   asyncHandler(async (req, res) => {
     const institutionId = await findSharedInstitution(req.params.id, req.user.sub);
     const data = await db.query(

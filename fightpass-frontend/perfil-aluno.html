@@ -8,19 +8,25 @@
 </head>
 <body class="light-theme app-shell" data-page="perfil-aluno">
     <main class="main-content">
-        <header style="margin-bottom: 30px;">
+        <header class="page-hero page-hero-profile">
             <h1 style="font-size: 28px;">Perfil do aluno</h1>
-            <p style="color: #64748B;">Dados acadêmicos, avaliações e progresso do aluno selecionado.</p>
+            <p>Dados academicos, plano, foto, avaliacoes e progresso do aluno selecionado.</p>
         </header>
 
         <div id="student-profile-message" hidden></div>
 
         <section class="card-white" style="max-width: 1000px;">
-            <div style="margin-bottom: 30px;">
-                <h2 id="student-name" style="font-size: 22px; color: var(--primary-blue);">-</h2>
-                <p><strong>Modalidade:</strong> <span id="student-modality">-</span></p>
-                <p style="color: #10B981;"><strong>Presença média:</strong> <span id="student-attendance">-</span></p>
-                <p><strong>Nota média:</strong> <span id="student-score">-</span></p>
+            <div class="student-profile-head">
+                <div id="student-avatar" class="avatar-xl"><span>FP</span></div>
+                <div>
+                    <h2 id="student-name" style="font-size: 22px; color: var(--primary-blue);">-</h2>
+                    <p><strong>Genero:</strong> <span id="student-gender">-</span></p>
+                    <p><strong>Modalidade:</strong> <span id="student-modality">-</span></p>
+                    <p><strong>Plano:</strong> <span id="student-plan">-</span></p>
+                    <p><strong>Valido ate:</strong> <span id="student-plan-expiration">-</span></p>
+                    <p style="color: #10B981;"><strong>Presenca media:</strong> <span id="student-attendance">-</span></p>
+                    <p><strong>Nota media:</strong> <span id="student-score">-</span></p>
+                </div>
             </div>
 
             <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 20px 0;">

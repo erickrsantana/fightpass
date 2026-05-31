@@ -11,6 +11,7 @@ const {
 } = require("../../services/dojoSubscriptionService");
 
 const router = express.Router();
+const PAYMENT_METHODS = ["pix", "boleto", "credit_card", "debit_card", "transfer"];
 
 function serializePlan(plan) {
   return {
@@ -95,7 +96,7 @@ router.post(
   auth(["institution_admin"]),
   [
     body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("method").isIn(["pix", "boleto"]).withMessage("Forma de pagamento invalida")
+    body("method").isIn(PAYMENT_METHODS).withMessage("Forma de pagamento invalida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {

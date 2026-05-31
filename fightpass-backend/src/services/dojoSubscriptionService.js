@@ -100,14 +100,18 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
 
     const code = method === "pix"
       ? makePaymentCode("PIXDOJO", insert.insertId)
-      : makePaymentCode("23790", insert.insertId);
+      : method === "boleto"
+        ? makePaymentCode("23790", insert.insertId)
+        : makePaymentCode(`${method.toUpperCase().replace("_", "")}`, insert.insertId);
 
-    await connection.execute(
-      method === "pix"
-        ? "UPDATE dojo_payment_simulations SET pix_code = ? WHERE id = ?"
-        : "UPDATE dojo_payment_simulations SET boleto_code = ? WHERE id = ?",
-      [code, insert.insertId]
-    );
+    if (method === "pix" || method === "boleto") {
+      await connection.execute(
+        method === "pix"
+          ? "UPDATE dojo_payment_simulations SET pix_code = ? WHERE id = ?"
+          : "UPDATE dojo_payment_simulations SET boleto_code = ? WHERE id = ?",
+        [code, insert.insertId]
+      );
+    }
 
     await auditLog(userId, "dojo.payment_simulation.create", "dojo_payment_simulations", insert.insertId, {
       institutionId,
@@ -129,6 +133,7 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
       contractTextVersion: termsVersion,
       pixCode: method === "pix" ? code : null,
       boletoCode: method === "boleto" ? code : null,
+      referenceCode: method !== "pix" && method !== "boleto" ? code : null,
       prototypeNotice: "Pagamento ficticio para demonstracao academica. Nenhuma cobranca real sera executada."
     };
   } catch (error) {

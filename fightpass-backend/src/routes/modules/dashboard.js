@@ -23,9 +23,9 @@ router.get(
 
 router.get(
   "/institution/:id",
-  auth(["institution_admin", "instructor"]),
+  auth(["institution_admin"]),
   asyncHandler(async (req, res) => {
-    await ensureInstitutionAccess(req.user.sub, req.params.id);
+    await ensureInstitutionAccess(req.user.sub, req.params.id, ["institution_admin"]);
     const rows = await db.query(
       `SELECT
           (SELECT COUNT(*) FROM enrollments WHERE institution_id = ? AND status = 'active') AS active_students,

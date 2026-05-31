@@ -21,7 +21,7 @@ const router = express.Router();
 
 async function findUserByEmail(email) {
   const rows = await db.query(
-    `SELECT u.id, u.name, u.email, u.password_hash, u.document, u.phone, u.is_active, r.code AS role, r.id AS role_id
+    `SELECT u.id, u.name, u.email, u.password_hash, u.document, u.phone, u.gender, u.avatar_url, u.is_active, r.code AS role, r.id AS role_id
      FROM users u
      INNER JOIN roles r ON r.id = u.role_id
      WHERE u.email = ? LIMIT 1`,
@@ -58,7 +58,7 @@ async function findInstitutionByLegalDocument(document) {
 
 async function findUserById(id) {
   const rows = await db.query(
-    `SELECT u.id, u.name, u.email, u.document, u.phone, u.is_active, r.code AS role
+    `SELECT u.id, u.name, u.email, u.document, u.phone, u.gender, u.avatar_url, u.is_active, r.code AS role
      FROM users u
      INNER JOIN roles r ON r.id = u.role_id
      WHERE u.id = ? LIMIT 1`,
@@ -76,6 +76,8 @@ async function serializeUser(user) {
     role: user.role,
     document: user.document,
     phone: user.phone,
+    gender: user.gender,
+    avatarUrl: user.avatar_url,
     institutions
   };
 }
@@ -94,16 +96,26 @@ router.post(
       .trim()
       .isLength({ min: 11 }).withMessage("Documento invalido")
       .custom((value, { req }) => {
-        if (req.body.accountType === "student" && !isValidCpf(value)) {
+        const accountType = req.body.accountType || "student";
+        if (accountType === "student" && !isValidCpf(value)) {
           throw new Error("CPF invalido para cadastro de aluno");
         }
         return true;
       }),
-    body("accountType").isIn(["student", "instructor", "institution_admin"]).withMessage("Tipo de conta invalido"),
-    body("institutionName").optional().trim().isLength({ min: 3 }).withMessage("Nome da instituicao invalido")
+    body("accountType")
+      .optional()
+      .equals("student")
+      .withMessage("Cadastro publico disponivel apenas para alunos"),
+    body("gender")
+      .optional({ checkFalsy: true })
+      .isIn(["female", "male", "non_binary", "prefer_not_to_say", "other"])
+      .withMessage("Genero invalido"),
+    body("institutionName").optional({ checkFalsy: true }).trim().isLength({ min: 3 }).withMessage("Nome da instituicao invalido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
+    const accountType = req.body.accountType || "student";
+
     assertTermsAccepted({
       accepted: req.body.termsAccepted,
       version: req.body.termsVersion
@@ -119,14 +131,14 @@ router.post(
       throw new ApiError(409, "CPF/CNPJ ja cadastrado");
     }
 
-    if (req.body.accountType === "institution_admin") {
+    if (accountType === "institution_admin") {
       const existingInstitution = await findInstitutionByLegalDocument(req.body.document);
       if (existingInstitution) {
         throw new ApiError(409, "Ja existe uma instituicao com este CNPJ");
       }
     }
 
-    const roles = await db.query("SELECT id, code FROM roles WHERE code = ? LIMIT 1", [req.body.accountType]);
+    const roles = await db.query("SELECT id, code FROM roles WHERE code = ? LIMIT 1", [accountType]);
     const role = roles[0];
     if (!role) {
       throw new ApiError(400, "Perfil de usuario invalido");
@@ -138,14 +150,14 @@ router.post(
       await connection.beginTransaction();
       const passwordHash = await hashPassword(req.body.password);
       const [insertUser] = await connection.execute(
-        `INSERT INTO users (role_id, name, email, password_hash, document, phone, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, 1)`,
-        [role.id, req.body.name, req.body.email, passwordHash, req.body.document, req.body.phone || null]
+        `INSERT INTO users (role_id, name, email, password_hash, document, phone, gender, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        [role.id, req.body.name, req.body.email, passwordHash, req.body.document, req.body.phone || null, req.body.gender || null]
       );
 
       let institutionId = null;
 
-      if (req.body.accountType === "institution_admin") {
+      if (accountType === "institution_admin") {
         const [insertInstitution] = await connection.execute(
           `INSERT INTO institutions (owner_user_id, name, legal_document, email, phone, description, status)
            VALUES (?, ?, ?, ?, ?, ?, 'active')`,
@@ -177,7 +189,7 @@ router.post(
       }
 
       let access = null;
-      if (req.body.accountType === "student") {
+      if (accountType === "student") {
         access = await createTrialAccess({
           userId: insertUser.insertId,
           document: req.body.document
@@ -195,9 +207,9 @@ router.post(
       await auditLog(
         insertUser.insertId,
         "auth.register",
-        req.body.accountType === "institution_admin" ? "institutions" : "users",
+        accountType === "institution_admin" ? "institutions" : "users",
         institutionId || insertUser.insertId,
-        { role: req.body.accountType, trialAccess: Boolean(access), termsAcceptanceId: termsAcceptance.id },
+        { role: accountType, trialAccess: Boolean(access), termsAcceptanceId: termsAcceptance.id },
         connection
       );
 
@@ -230,12 +242,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const user = await findUserByEmail(req.body.email);
     if (!user || !user.is_active) {
-      throw new ApiError(401, "Credenciais invalidas");
+      throw new ApiError(401, "E-mail ou senha incorretos");
     }
 
     const matches = await comparePassword(req.body.password, user.password_hash);
     if (!matches) {
-      throw new ApiError(401, "Credenciais invalidas");
+      throw new ApiError(401, "E-mail ou senha incorretos");
     }
 
     const token = signToken(user);

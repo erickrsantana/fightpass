@@ -9,9 +9,9 @@
 </head>
 <body class="light-theme app-shell" data-page="mapa">
     <main class="main-content">
-        <header style="margin-bottom: 30px;">
+        <header class="page-hero page-hero-map">
             <h1>Mapa de academias</h1>
-            <p style="color: #64748B;">Pesquise instituições por modalidade ou nome.</p>
+            <p>Pesquise instituicoes por modalidade, nome, bairro ou proximidade.</p>
         </header>
 
         <div id="map-message" hidden></div>
@@ -19,7 +19,14 @@
         <div class="card-white" style="margin-bottom: 20px;">
             <div class="input-group">
                 <label for="map-search">Buscar academia</label>
-                <input id="map-search" type="search" class="input-field" placeholder="Digite parte do nome da instituição">
+                <input id="map-search" type="search" class="input-field" placeholder="Digite parte do nome da instituicao">
+            </div>
+            <div class="input-group">
+                <label for="near-address">Endereco, bairro ou CEP</label>
+                <div class="input-action-row">
+                    <input id="near-address" type="search" class="input-field" placeholder="Ex.: Vila Mariana, Centro ou 01310-100">
+                    <button id="use-location" type="button" class="btn-secondary">Usar meu local</button>
+                </div>
             </div>
             <div id="modality-list" class="button-row"></div>
         </div>

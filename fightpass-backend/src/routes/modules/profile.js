@@ -16,7 +16,7 @@ const router = express.Router();
 
 async function findProfileById(userId) {
   const rows = await db.query(
-    `SELECT u.id, u.name, u.email, u.phone, u.document, r.code AS role
+    `SELECT u.id, u.name, u.email, u.phone, u.gender, u.avatar_url, u.document, r.code AS role
      FROM users u
      INNER JOIN roles r ON r.id = u.role_id
      WHERE u.id = ? LIMIT 1`,
@@ -47,7 +47,15 @@ router.put(
   [
     body("name").optional().trim().isLength({ min: 3 }).withMessage("Nome invalido"),
     body("phone").optional().trim().isLength({ min: 10 }).withMessage("Telefone invalido"),
-    body("document").optional().trim().isLength({ min: 11 }).withMessage("Documento invalido")
+    body("document").optional().trim().isLength({ min: 11 }).withMessage("Documento invalido"),
+    body("gender")
+      .optional({ checkFalsy: true })
+      .isIn(["female", "male", "non_binary", "prefer_not_to_say", "other"])
+      .withMessage("Genero invalido"),
+    body("avatarUrl")
+      .optional({ checkFalsy: true })
+      .isURL({ protocols: ["http", "https"], require_protocol: true })
+      .withMessage("URL da foto invalida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -66,9 +74,18 @@ router.put(
       `UPDATE users
        SET name = COALESCE(?, name),
            phone = COALESCE(?, phone),
-           document = COALESCE(?, document)
+           document = COALESCE(?, document),
+           gender = ?,
+           avatar_url = ?
        WHERE id = ?`,
-      [req.body.name || null, req.body.phone || null, req.body.document || null, req.user.sub]
+      [
+        req.body.name || null,
+        req.body.phone || null,
+        req.body.document || null,
+        req.body.gender || null,
+        req.body.avatarUrl || null,
+        req.user.sub
+      ]
     );
 
     const profile = await findProfileById(req.user.sub);
