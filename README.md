@@ -1,21 +1,50 @@
 # FightPass
 
-Plataforma acadêmica para gestão de academias e alunos de artes marciais, desenvolvida como projeto de TCC.
+O **FightPass** é uma plataforma acadêmica desenvolvida como Trabalho de Conclusão de Curso, voltada para a gestão de academias, alunos, aulas e check-ins em instituições de artes marciais.
 
-## Estrutura
+A aplicação permite que alunos encontrem academias, realizem agendamentos de aulas, façam check-in por token ou QR Code e acompanhem suas informações dentro da plataforma. Também oferece recursos administrativos para gestores e instrutores acompanharem alunos, turmas, avaliações, planos e dados gerenciais.
 
-- `fightpass-frontend`: frontend estático em HTML, CSS e JavaScript integrado à API.
-- `fightpass-backend`: API Node.js + Express, banco MySQL
-- `docs`: Documentação
+## Tecnologias Utilizadas
+
+O projeto foi desenvolvido utilizando as seguintes tecnologias:
+
+* **HTML, CSS e JavaScript**: construção do frontend da aplicação.
+* **Node.js**: ambiente de execução do backend.
+* **Express.js**: framework utilizado para criação da API.
+* **MySQL**: banco de dados relacional utilizado para armazenar as informações do sistema.
+* **JWT**: autenticação de usuários por token.
+* **npm**: gerenciamento de dependências.
+* **Git e GitHub**: versionamento e hospedagem do código-fonte.
+* **Vercel ou Netlify**: opções de deploy para o frontend.
+* **Railway**: opção de deploy para o backend.
+
+## Estrutura do Projeto
+
+A estrutura principal do projeto está organizada da seguinte forma:
+
+* `fightpass-frontend`: frontend estático em HTML, CSS e JavaScript integrado à API.
+* `fightpass-backend`: API desenvolvida em Node.js com Express e banco MySQL.
+* `docs`: pasta destinada à documentação do projeto.
 
 ## Pré-requisitos
 
-- Node.js 22
-- npm 10
-- MySQL 8
-- Git
+Antes de executar o projeto, é necessário ter instalado na máquina:
 
-## Configuração do banco
+* Node.js 22
+* npm 10
+* MySQL 8
+* Git
+
+## Instalação e Configuração
+
+### 1. Clonar o repositório
+
+```powershell
+git clone https://github.com/seu-usuario/fightpass.git
+cd fightpass
+```
+
+### 2. Configurar o banco de dados
 
 Crie o banco de dados no MySQL:
 
@@ -23,7 +52,7 @@ Crie o banco de dados no MySQL:
 CREATE DATABASE fightpass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-## Backend
+### 3. Configurar o backend
 
 Entre na pasta do backend:
 
@@ -37,7 +66,7 @@ Copie o arquivo de ambiente:
 Copy-Item .env.example .env
 ```
 
-Configure as variáveis:
+Configure as variáveis de ambiente no arquivo `.env`:
 
 ```env
 PORT=3000
@@ -66,11 +95,21 @@ CHECKIN_TOKEN_TTL_SECONDS=45
 BOOKING_CANCELLATION_LIMIT_HOURS=2
 ```
 
-Instale dependências, crie as tabelas e carregue dados de demonstração:
+Instale as dependências:
 
 ```powershell
 npm install
+```
+
+Crie as tabelas do banco de dados:
+
+```powershell
 npm run migrate
+```
+
+Carregue os dados de demonstração:
+
+```powershell
 npm run seed
 ```
 
@@ -80,104 +119,272 @@ Execute a API:
 npm run dev
 ```
 
-Teste de saúde:
+### 4. Testar a API
+
+Após iniciar o backend, acesse a rota de teste de saúde da API:
 
 ```text
 GET http://localhost:3000/api/health
 ```
 
-## Frontend
+Se a API estiver funcionando corretamente, o sistema deverá retornar uma resposta indicando que o serviço está ativo.
 
-Abra o arquivo:
+## Configuração do Frontend
+
+Abra o arquivo principal do frontend:
 
 ```text
 fightpass-frontend/index.html
 ```
 
-O frontend consome a API em `http://localhost:3000/api`
+O frontend consome a API em:
+
+```text
+http://localhost:3000/api
+```
+
+Caso seja necessário configurar manualmente a URL da API, utilize:
 
 ```javascript
 localStorage.setItem("fightpass.apiBaseUrl", "http://localhost:3000/api")
 ```
 
-Para deploy, use a pasta `fightpass-frontend` como raiz do projeto na Vercel ou Netlify, configure a variavel `FIGHTPASS_API_BASE_URL` com a URL publica do backend no Railway terminando em `/api`, e publique o diretorio `dist` gerado por `npm run build`.
+## Deploy
 
-## Usuários de demonstração
+Para realizar o deploy do frontend, é possível utilizar plataformas como **Vercel** ou **Netlify**.
 
-Todos usam a senha `FightPass123` após executar o seed.
+Use a pasta `fightpass-frontend` como raiz do projeto e configure a variável:
 
-| Perfil | Email |
-|---|---|
-| Administrador da instituição | `contato@dojosakura.com` |
-| Instrutor | `carlos@dojosakura.com` |
-| Aluno | `joao@fightpass.com` |
+```text
+FIGHTPASS_API_BASE_URL
+```
 
-## Rotas principais
+Essa variável deve receber a URL pública do backend hospedado no Railway, terminando em `/api`.
 
-Autenticação:
+Exemplo:
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `GET /api/auth/me`
-- `POST /api/auth/logout`
+```text
+https://sua-api-fightpass.up.railway.app/api
+```
 
-Recuperação de senha:
+Após isso, publique o diretório `dist` gerado pelo comando:
 
-- Configure `SMTP_USER` e `SMTP_PASS` para envio real via Brevo SMTP ou outro SMTP.
-- No Brevo, use `smtp-relay.brevo.com`, porta `587`, SMTP login e SMTP key.
-- Configure `PASSWORD_RESET_URL` para apontar para a tela `redefinir-senha.html` servida pelo frontend.
-- Se as credenciais SMTP estiverem vazias, o token ainda é salvo em `password_reset_tokens`, mas o email não é enviado.
+```powershell
+npm run build
+```
 
-Perfil:
+O backend pode ser publicado em plataformas como **Railway**, desde que as variáveis de ambiente sejam configuradas corretamente.
 
-- `GET /api/profile`
-- `PUT /api/profile`
-- `PUT /api/profile/password`
+## Usuários de Demonstração
 
-Catálogo:
+Após executar o comando de seed, os usuários abaixo estarão disponíveis para testes.
 
-- `GET /api/modalities`
-- `GET /api/map/search`
-- `GET /api/institutions`
-- `GET /api/institutions/:id`
-- `GET /api/institutions/:id/students`
+Todos utilizam a senha:
 
-Turmas:
+```text
+FightPass123
+```
 
-- `GET /api/classes`
-- `GET /api/classes/:id`
-- `POST /api/classes`
+| Perfil                       | Email                                                   |
+| ---------------------------- | ------------------------------------------------------- |
+| Administrador da instituição | [contato@dojosakura.com](mailto:contato@dojosakura.com) |
+| Instrutor                    | [carlos@dojosakura.com](mailto:carlos@dojosakura.com)   |
+| Aluno                        | [joao@fightpass.com](mailto:joao@fightpass.com)         |
 
-Agendamentos:
+## Exemplos de Uso
 
-- `GET /api/bookings`
-- `POST /api/bookings`
-- `POST /api/bookings/recurring`
-- `DELETE /api/bookings/:id`
+A aplicação pode ser utilizada em diferentes fluxos, de acordo com o perfil do usuário.
 
-Check-in:
+### Cadastro e Login
 
-- `POST /api/checkin/token`
-- `POST /api/checkin/confirm`
-- `GET /api/checkin/history`
+O usuário pode criar uma conta informando nome, e-mail, senha e tipo de conta. Após o cadastro, é possível realizar login e acessar a área interna da plataforma.
 
-Planos e pagamentos fictícios:
+Rotas principais:
 
-- `GET /api/plans`
-- `GET /api/access/me`
-- `POST /api/payments/simulate`
-- `POST /api/payments/:id/confirm`
+```text
+POST /api/auth/register
+POST /api/auth/login
+GET /api/auth/me
+POST /api/auth/logout
+```
 
-Avaliações:
+### Busca de Academias
 
-- `GET /api/students/:id/evaluations`
-- `POST /api/students/:id/evaluations`
-- `GET /api/students/:id/profile`
-- `GET /api/students/:id/progress`
+O aluno pode pesquisar academias por nome, modalidade ou localização. O sistema retorna instituições compatíveis com os filtros informados.
 
-Dashboards:
+Rotas principais:
 
-- `GET /api/dashboard/student`
-- `GET /api/dashboard/institution/:id`
+```text
+GET /api/map/search
+GET /api/institutions
+GET /api/institutions/:id
+```
+
+### Agendamento de Aulas
+
+O aluno pode visualizar turmas disponíveis e realizar o agendamento de uma aula. O sistema registra o agendamento e vincula a aula ao usuário.
+
+Rotas principais:
+
+```text
+GET /api/classes
+GET /api/classes/:id
+POST /api/bookings
+GET /api/bookings
+DELETE /api/bookings/:id
+```
+
+### Check-in
+
+O aluno pode realizar check-in utilizando um token ou QR Code válido. O sistema registra a presença do aluno na aula.
+
+Rotas principais:
+
+```text
+POST /api/checkin/token
+POST /api/checkin/confirm
+GET /api/checkin/history
+```
+
+### Painel Administrativo
+
+Gestores e instrutores podem acompanhar informações gerenciais, alunos, instituições, turmas, avaliações e dados de progresso.
+
+Rotas principais:
+
+```text
+GET /api/dashboard/student
+GET /api/dashboard/institution/:id
+GET /api/institutions/:id/students
+GET /api/students/:id/evaluations
+GET /api/students/:id/profile
+GET /api/students/:id/progress
+```
+
+## Rotas Principais da API
+
+### Autenticação
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+GET /api/auth/me
+POST /api/auth/logout
+```
+
+### Perfil
+
+```text
+GET /api/profile
+PUT /api/profile
+PUT /api/profile/password
+```
+
+### Catálogo
+
+```text
+GET /api/modalities
+GET /api/map/search
+GET /api/institutions
+GET /api/institutions/:id
+GET /api/institutions/:id/students
+```
+
+### Turmas
+
+```text
+GET /api/classes
+GET /api/classes/:id
+POST /api/classes
+```
+
+### Agendamentos
+
+```text
+GET /api/bookings
+POST /api/bookings
+POST /api/bookings/recurring
+DELETE /api/bookings/:id
+```
+
+### Check-in
+
+```text
+POST /api/checkin/token
+POST /api/checkin/confirm
+GET /api/checkin/history
+```
+
+### Planos e Pagamentos Fictícios
+
+```text
+GET /api/plans
+GET /api/access/me
+POST /api/payments/simulate
+POST /api/payments/:id/confirm
+```
+
+### Avaliações
+
+```text
+GET /api/students/:id/evaluations
+POST /api/students/:id/evaluations
+GET /api/students/:id/profile
+GET /api/students/:id/progress
+```
+
+### Dashboards
+
+```text
+GET /api/dashboard/student
+GET /api/dashboard/institution/:id
+```
+
+## Recuperação de Senha
+
+Para utilizar o envio real de e-mails de recuperação de senha, configure as variáveis SMTP no arquivo `.env`.
+
+Exemplo com Brevo:
+
+```env
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+```
+
+Também é necessário configurar a variável:
+
+```env
+PASSWORD_RESET_URL=http://127.0.0.1:5500/fightpass-frontend/redefinir-senha.html
+```
+
+Caso as credenciais SMTP estejam vazias, o token de recuperação ainda será salvo na tabela `password_reset_tokens`, porém o e-mail não será enviado.
+
+## Contribuindo
+
+Este projeto foi desenvolvido com finalidade acadêmica. Caso outras pessoas desejem contribuir, recomenda-se seguir os passos abaixo:
+
+1. Criar uma branch para a alteração.
+2. Realizar a implementação ou correção necessária.
+3. Testar a funcionalidade localmente.
+4. Registrar as alterações com commits claros.
+5. Enviar a alteração para análise antes de integrar ao projeto principal.
+
+Exemplo:
+
+```powershell
+git checkout -b minha-alteracao
+git add .
+git commit -m "Descrição da alteração realizada"
+git push origin minha-alteracao
+```
+
+## Licença
+
+Este projeto foi desenvolvido exclusivamente para fins acadêmicos, como parte de um Trabalho de Conclusão de Curso.
+
+O uso, cópia, modificação ou distribuição do código deve respeitar as orientações da instituição de ensino e dos autores do projeto.
