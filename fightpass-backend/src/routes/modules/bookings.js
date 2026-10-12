@@ -84,7 +84,36 @@ async function ensureBookingAllowed(studentId, classScheduleId, bookingDate) {
   return validation.schedule;
 }
 
+async function ensureEnrollment(connection, studentId, classScheduleId, isTrial) {
+  const [classRows] = await connection.execute(
+    `SELECT c.institution_id, c.modality_id
+     FROM class_schedules cs
+     INNER JOIN classes c ON c.id = cs.class_id
+     WHERE cs.id = ?
+     LIMIT 1`,
+    [classScheduleId]
+  );
+  const classInfo = classRows[0];
+  if (!classInfo) return;
+
+  const [existing] = await connection.execute(
+    `SELECT id
+     FROM enrollments
+     WHERE institution_id = ? AND student_id = ? AND modality_id = ? AND status IN ('active', 'trial')
+     LIMIT 1`,
+    [classInfo.institution_id, studentId, classInfo.modality_id]
+  );
+  if (existing[0]) return;
+
+  await connection.execute(
+    `INSERT INTO enrollments (institution_id, student_id, modality_id, status, started_at)
+     VALUES (?, ?, ?, ?, CURDATE())`,
+    [classInfo.institution_id, studentId, classInfo.modality_id, isTrial ? "trial" : "active"]
+  );
+}
+
 async function createBooking(connection, studentId, classScheduleId, bookingDate, isTrial) {
+  await ensureEnrollment(connection, studentId, classScheduleId, isTrial);
   const expiresAt = isTrial ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null;
   const [result] = await connection.execute(
     `INSERT INTO bookings (student_id, class_schedule_id, booking_date, status, is_trial, expires_at)

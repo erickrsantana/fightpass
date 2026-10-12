@@ -205,6 +205,79 @@
     });
   }
 
+  async function initCadastroAcademia() {
+    api.redirectIfAuthenticated();
+    const form = $("#academy-form");
+    const modalityBox = $("#academy-modalities");
+    const termsAcceptance = window.FightPassTerms.createAcceptance("#register-terms", {
+      origin: "cadastro"
+    });
+    setupPasswordToggle("#academy-password", "#show-academy-password");
+    await termsAcceptance.load();
+
+    const zipInput = $("#academy-zip");
+    zipInput.addEventListener("input", () => {
+      const digits = zipInput.value.replace(/\D/g, "").slice(0, 8);
+      zipInput.value = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+    });
+
+    try {
+      const response = await api.request("/modalities");
+      modalityBox.innerHTML = response.data.map((item) => `
+        <label class="filter-check">
+          <input type="checkbox" value="${html(item.slug)}" data-academy-modality checked>
+          <span>${html(item.name)}</span>
+        </label>
+      `).join("");
+    } catch (error) {
+      setMessage("#register-message", error.message, "error", error.details);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearFieldErrors(form);
+      if (!termsAcceptance.isAccepted()) {
+        setMessage("#register-message", "Aceite os Termos de Uso para finalizar o cadastro.", "error");
+        return;
+      }
+      const modalities = $all("[data-academy-modality]:checked").map((item) => item.value);
+      if (!modalities.length) {
+        setMessage("#register-message", "Selecione ao menos uma modalidade.", "error");
+        return;
+      }
+
+      setMessage("#register-message", "Cadastrando academia e localizando no mapa...", "loading");
+      const data = formData(form);
+      try {
+        const response = await api.register({
+          accountType: "institution_admin",
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          document: data.document,
+          phone: data.phone || null,
+          institutionName: data.institutionName,
+          zipCode: data.zipCode,
+          number: data.number,
+          complement: data.complement || null,
+          modalities,
+          ...termsAcceptance.payload()
+        });
+        api.saveSession(response.data);
+        api.setFlash(
+          response.data.geocodingStatus === "success"
+            ? "Academia cadastrada e localizada no mapa. Assine o Plano DOJO para disponibilizar aulas."
+            : "Academia cadastrada, mas a localização no mapa ainda está pendente. Confira o endereço em Gestão.",
+          "success"
+        );
+        window.location.href = "planos.html";
+      } catch (error) {
+        applyFieldErrors(form, error.details);
+        setMessage("#register-message", error.message, "error", error.details);
+      }
+    });
+  }
+
   async function initRecuperacaoSenha() {
     api.redirectIfAuthenticated();
     const params = new URLSearchParams(window.location.search);
@@ -353,14 +426,23 @@
     let map = null;
     let markerLayer = null;
     let searchTimer = null;
+    const isStudent = user.role === "student";
+    const ownInstitutionId = isStudent ? null : api.firstInstitutionId(user);
 
     function numericCoordinate(value) {
+      // Number(null) e Number("") retornam 0, o que jogava o mapa em lat 0 / lng 0 (oceano).
+      if (value === null || value === undefined || String(value).trim() === "") return null;
       const coordinate = Number(value);
       return Number.isFinite(coordinate) ? coordinate : null;
     }
 
     function hasCoordinates(item) {
-      return numericCoordinate(item.latitude) !== null && numericCoordinate(item.longitude) !== null;
+      const lat = numericCoordinate(item.latitude);
+      const lng = numericCoordinate(item.longitude);
+      if (lat === null || lng === null) return false;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+      // (0, 0) e um valor de coordenada nao preenchida, nao uma academia real.
+      return !(lat === 0 && lng === 0);
     }
 
     function syncSelectedModalities() {
@@ -402,26 +484,27 @@
         const item = response.data;
         const address = item.formatted_address
           || [item.street, item.number, item.neighborhood, item.city, item.state, item.zip_code].filter(Boolean).join(", ");
-        const classes = item.classes || [];
+        const isOwn = !isStudent && String(item.id) === String(ownInstitutionId);
+        const classes = (isStudent || isOwn) ? (item.classes || []) : [];
         details.innerHTML = `
-          <h2>${html(item.name)}</h2>
+          <div style="display:flex; gap:14px; align-items:center; margin-bottom:8px;">${window.FightPassLogo ? window.FightPassLogo.html(item, 56) : ""}<h2 style="margin:0;">${html(item.name)}${isOwn ? " (sua academia)" : ""}</h2></div>
           <p>${html(item.description || "Sem descrição cadastrada.")}</p>
           <p><strong>Contato:</strong> ${html(item.email || "-")} ${html(item.phone || "")}</p>
           <p><strong>Endereço:</strong> ${html(address || "Endereço não cadastrado.")}</p>
           <p><strong>Localização:</strong> ${hasCoordinates(item) ? `${html(item.latitude)}, ${html(item.longitude)}` : "Coordenadas pendentes para este CEP."}</p>
           ${item.modalities && item.modalities.length ? `<div class="chip-row">${item.modalities.map((modality) => `<span class="badge-modalidade">${html(modality.name)}</span>`).join("")}</div>` : ""}
-          <h3>Turmas vinculadas</h3>
+          ${(isStudent || isOwn) ? `<h3>Turmas vinculadas</h3>
           ${classes.length ? `<ul class="simple-list">${classes.map((classItem) => `
             <li>
               <strong>${html(classItem.title)}</strong> - ${html(classItem.modality_name)}
               (${api.dayLabel(classItem.day_of_week)} ${api.timeLabel(classItem.start_time)})
-              <a href="${scheduleLink(item, classItem.schedule_id)}">Reservar</a>
+              ${isStudent ? `<a href="${scheduleLink(item, classItem.schedule_id)}">Reservar</a>` : ""}
             </li>
-          `).join("")}</ul>` : `<div class="empty-state">Nenhuma turma ativa vinculada.</div>`}
-          <div class="button-row" style="margin-top:18px;">
+          `).join("")}</ul>` : `<div class="empty-state">Nenhuma turma ativa vinculada.</div>`}` : ""}
+          ${isStudent ? `<div class="button-row" style="margin-top:18px;">
             <a class="btn-primary" style="width:auto; padding:10px 18px;" href="agendar.html?institutionId=${html(item.id)}">Ver agenda</a>
             <a class="btn-secondary" style="width:auto; padding:10px 18px;" href="checkin.html">Fazer check-in</a>
-          </div>
+          </div>` : `<div class="notice-card" style="margin-top:18px;">${isOwn ? "Esta é a sua academia. Gerencie turmas e alunos em Gestão e Modalidades." : "Visualização somente leitura. Gestores não têm acesso às informações internas de outras academias."}</div>`}
         `;
 
         $all(".result-card").forEach((card) => {
@@ -455,7 +538,11 @@
 
       if (bounds.length) {
         map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+      } else {
+        map.setView([-23.55052, -46.633308], 12);
       }
+      // Garante que o Leaflet recalcule o tamanho do container depois do layout.
+      setTimeout(() => map.invalidateSize(), 0);
     }
 
     async function loadInstitutions() {
@@ -476,9 +563,14 @@
         } else {
           institutionList.innerHTML = institutions.map((item) => `
             <button class="result-card" data-id="${item.id}">
-              <strong>${html(item.name)}</strong>
-              <span>${html([item.neighborhood, item.city, item.state].filter(Boolean).join(" - "))}</span>
-              <small>${item.distance_km !== null && item.distance_km !== undefined ? `${html(item.distance_km)} km de voce` : hasCoordinates(item) ? "Localizacao disponivel no mapa" : "Coordenadas pendentes para este CEP"}</small>
+              <div style="display:flex; gap:12px; align-items:center;">
+                ${window.FightPassLogo ? window.FightPassLogo.html(item, 48) : ""}
+                <div style="min-width:0;">
+                  <strong>${html(item.name)}${!isStudent && String(item.id) === String(ownInstitutionId) ? " (sua academia)" : ""}</strong>
+                  <span>${html([item.neighborhood, item.city, item.state].filter(Boolean).join(" - "))}</span>
+                  <small>${item.distance_km !== null && item.distance_km !== undefined ? `${html(item.distance_km)} km de voce` : hasCoordinates(item) ? "Localizacao disponivel no mapa" : "Coordenadas pendentes para este CEP"}</small>
+                </div>
+              </div>
             </button>
           `).join("");
         }
@@ -925,6 +1017,13 @@
     const subscriptionPanel = $("#dojo-subscription");
     const attendanceDate = $("#attendance-date");
     const attendanceTable = $("#attendance-table");
+    const attendanceModalities = $("#attendance-modalities");
+    const attendanceSlots = $("#attendance-slots");
+    const attendanceTitle = $("#attendance-slot-title");
+    let rosterItems = [];
+    let dojoClasses = [];
+    let selectedModality = null;
+    let selectedSlotKey = null;
 
     $all("[data-admin-only]").forEach((item) => {
       item.hidden = !isAdmin;
@@ -975,6 +1074,100 @@
       `).join("") : `<tr><td colspan="5">Nenhuma aula cadastrada.</td></tr>`;
     }
 
+    function attendanceSlotKey(modality, title, startTime) {
+      return `${modality}|${title}|${String(startTime).slice(0, 5)}`;
+    }
+
+    function buildAttendanceSlots() {
+      const slots = new Map();
+      const weekday = attendanceDate && attendanceDate.value
+        ? new Date(`${attendanceDate.value}T00:00:00`).getDay()
+        : null;
+
+      dojoClasses.filter((item) => item.status === "active").forEach((item) => {
+        (item.schedules || []).forEach((schedule) => {
+          if (weekday !== null && Number(schedule.day_of_week) !== weekday) return;
+          const key = attendanceSlotKey(item.modality_name, item.title, schedule.start_time);
+          slots.set(key, {
+            key,
+            modality: item.modality_name,
+            title: item.title,
+            start: schedule.start_time,
+            end: schedule.end_time,
+            items: []
+          });
+        });
+      });
+
+      rosterItems.forEach((item) => {
+        const key = attendanceSlotKey(item.modality_name, item.class_title, item.start_time);
+        if (!slots.has(key)) {
+          slots.set(key, {
+            key,
+            modality: item.modality_name,
+            title: item.class_title,
+            start: item.start_time,
+            end: item.end_time,
+            items: []
+          });
+        }
+        slots.get(key).items.push(item);
+      });
+
+      return Array.from(slots.values()).sort((a, b) =>
+        String(a.start).localeCompare(String(b.start)) || String(a.title).localeCompare(String(b.title)));
+    }
+
+    function renderAttendance() {
+      if (!attendanceTable) return;
+      const slots = buildAttendanceSlots();
+      const modalities = Array.from(new Set(slots.map((slot) => slot.modality)))
+        .sort((a, b) => String(a).localeCompare(String(b)));
+
+      if (!modalities.includes(selectedModality)) selectedModality = modalities[0] || null;
+      const modalitySlots = slots.filter((slot) => slot.modality === selectedModality);
+      if (!modalitySlots.some((slot) => slot.key === selectedSlotKey)) selectedSlotKey = null;
+
+      if (attendanceModalities) {
+        attendanceModalities.innerHTML = modalities.length ? modalities.map((modality) => {
+          const total = slots.filter((slot) => slot.modality === modality)
+            .reduce((sum, slot) => sum + slot.items.length, 0);
+          return `<button type="button" class="${modality === selectedModality ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:8px 16px;" data-attendance-modality="${html(modality)}">${html(modality)} (${total})</button>`;
+        }).join("") : `<div class="empty-state">Nenhuma aula neste dia da semana.</div>`;
+      }
+
+      if (attendanceSlots) {
+        attendanceSlots.innerHTML = modalitySlots.map((slot) => `
+          <button type="button" class="${slot.key === selectedSlotKey ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:8px 16px;" data-attendance-slot="${html(slot.key)}">
+            ${api.timeLabel(slot.start)}-${api.timeLabel(slot.end)} - ${html(slot.title)} (${slot.items.length} aluno${slot.items.length === 1 ? "" : "s"})
+          </button>
+        `).join("");
+      }
+
+      const selected = modalitySlots.find((slot) => slot.key === selectedSlotKey);
+      if (attendanceTitle) {
+        attendanceTitle.textContent = selected
+          ? `${selected.modality} - ${selected.title} - ${api.timeLabel(selected.start)}-${api.timeLabel(selected.end)}`
+          : "";
+      }
+
+      if (!selected) {
+        attendanceTable.innerHTML = `<tr><td colspan="3">${modalities.length ? "Toque em um horario para ver os alunos." : "Nenhuma aula agendada para a data selecionada."}</td></tr>`;
+        return;
+      }
+
+      attendanceTable.innerHTML = selected.items.length ? selected.items.map((item) => `
+        <tr>
+          <td>${html(item.student_name)}</td>
+          <td>${html(api.statusLabel(item.attendance_status || "pending"))}</td>
+          <td>
+            <button class="btn-secondary" style="width:auto; padding:8px 12px;" data-attendance-booking="${item.booking_id}" data-attendance-status="present">Presente</button>
+            <button class="btn-cancel" type="button" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">Ausente</button>
+          </td>
+        </tr>
+      `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horario.</td></tr>`;
+    }
+
     async function loadRoster() {
       if (!attendanceTable || !attendanceDate) return;
       try {
@@ -983,22 +1176,30 @@
           date: attendanceDate.value
         });
         const response = await api.request(`/checkin/roster?${params.toString()}`);
-        const items = response.data.items || [];
-        attendanceTable.innerHTML = items.length ? items.map((item) => `
-          <tr>
-            <td>${html(item.student_name)}</td>
-            <td>${html(item.class_title)}<br><small>${html(item.modality_name)}</small></td>
-            <td>${api.dayLabel(item.day_of_week)} ${api.timeLabel(item.start_time)}-${api.timeLabel(item.end_time)}</td>
-            <td>${html(api.statusLabel(item.attendance_status || "pending"))}</td>
-            <td>
-              <button class="btn-secondary" style="width:auto; padding:8px 12px;" data-attendance-booking="${item.booking_id}" data-attendance-status="present">Presente</button>
-              <button class="btn-cancel" type="button" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">Ausente</button>
-            </td>
-          </tr>
-        `).join("") : `<tr><td colspan="5">Nenhuma aula agendada para a data selecionada.</td></tr>`;
+        rosterItems = response.data.items || [];
+        renderAttendance();
       } catch (error) {
         setMessage("#management-message", error.message, "error", error.details);
       }
+    }
+
+    if (attendanceModalities) {
+      attendanceModalities.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-attendance-modality]");
+        if (!button) return;
+        selectedModality = button.dataset.attendanceModality;
+        selectedSlotKey = null;
+        renderAttendance();
+      });
+    }
+
+    if (attendanceSlots) {
+      attendanceSlots.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-attendance-slot]");
+        if (!button) return;
+        selectedSlotKey = button.dataset.attendanceSlot;
+        renderAttendance();
+      });
     }
 
     async function loadDojoData() {
@@ -1011,6 +1212,8 @@
       renderSubscription(subscription.data);
       renderAddress(institution.data);
       renderClasses(classes.data);
+      dojoClasses = classes.data || [];
+      renderAttendance();
       if (isAdmin && $("#class-modality")) {
         $("#class-modality").innerHTML = institution.data.modalities.map((item) => `
           <option value="${item.id}">${html(item.name)}</option>
@@ -1137,6 +1340,184 @@
     }
   }
 
+    async function initModalidades() {
+    const user = await api.requireAuth(["institution_admin", "instructor"]);
+    if (!user) return;
+    const institutionId = currentInstitutionOrStop(user, "#management-message");
+    if (!institutionId) return;
+    const attendanceDate = $("#attendance-date");
+    const attendanceTable = $("#attendance-table");
+    const attendanceModalities = $("#attendance-modalities");
+    const attendanceSlots = $("#attendance-slots");
+    const attendanceTitle = $("#attendance-slot-title");
+    let rosterItems = [];
+    let dojoClasses = [];
+    let modalityNames = [];
+    let selectedModality = null;
+    let selectedSlotKey = null;
+
+    if (attendanceDate) attendanceDate.value = new Date().toISOString().slice(0, 10);
+
+    function slotKey(modality, title, startTime) {
+      return `${modality}|${title}|${String(startTime).slice(0, 5)}`;
+    }
+
+    function buildSlots() {
+      const slots = new Map();
+      const weekday = attendanceDate && attendanceDate.value
+        ? new Date(`${attendanceDate.value}T00:00:00`).getDay()
+        : null;
+
+      dojoClasses.filter((item) => item.status === "active").forEach((item) => {
+        (item.schedules || []).forEach((schedule) => {
+          if (weekday !== null && Number(schedule.day_of_week) !== weekday) return;
+          const key = slotKey(item.modality_name, item.title, schedule.start_time);
+          slots.set(key, {
+            key,
+            modality: item.modality_name,
+            title: item.title,
+            start: schedule.start_time,
+            end: schedule.end_time,
+            items: []
+          });
+        });
+      });
+
+      rosterItems.forEach((item) => {
+        const key = slotKey(item.modality_name, item.class_title, item.start_time);
+        if (!slots.has(key)) {
+          slots.set(key, {
+            key,
+            modality: item.modality_name,
+            title: item.class_title,
+            start: item.start_time,
+            end: item.end_time,
+            items: []
+          });
+        }
+        slots.get(key).items.push(item);
+      });
+
+      return Array.from(slots.values()).sort((a, b) =>
+        String(a.start).localeCompare(String(b.start)) || String(a.title).localeCompare(String(b.title)));
+    }
+
+    function render() {
+      const slots = buildSlots();
+      const names = Array.from(new Set([...modalityNames, ...slots.map((slot) => slot.modality)]))
+        .sort((a, b) => String(a).localeCompare(String(b)));
+
+      if (selectedModality && !names.includes(selectedModality)) selectedModality = null;
+      const modalitySlots = slots.filter((slot) => slot.modality === selectedModality);
+      if (!modalitySlots.some((slot) => slot.key === selectedSlotKey)) selectedSlotKey = null;
+
+      attendanceModalities.innerHTML = names.length ? names.map((name) => {
+        const own = slots.filter((slot) => slot.modality === name);
+        const students = own.reduce((sum, slot) => sum + slot.items.length, 0);
+        return `<button type="button" class="${name === selectedModality ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:12px 20px;" data-attendance-modality="${html(name)}">
+          ${html(name)}<br><small>${own.length} horario${own.length === 1 ? "" : "s"} | ${students} aluno${students === 1 ? "" : "s"}</small>
+        </button>`;
+      }).join("") : `<div class="empty-state">Nenhuma modalidade cadastrada.</div>`;
+
+      if (!selectedModality) {
+        attendanceSlots.innerHTML = `<div class="empty-state">Toque em uma modalidade para ver os horarios.</div>`;
+      } else if (!modalitySlots.length) {
+        attendanceSlots.innerHTML = `<div class="empty-state">Nenhuma aula de ${html(selectedModality)} neste dia da semana.</div>`;
+      } else {
+        attendanceSlots.innerHTML = modalitySlots.map((slot) => `
+          <button type="button" class="${slot.key === selectedSlotKey ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:12px 20px;" data-attendance-slot="${html(slot.key)}">
+            ${api.timeLabel(slot.start)}-${api.timeLabel(slot.end)}<br><small>${html(slot.title)} | ${slot.items.length} aluno${slot.items.length === 1 ? "" : "s"}</small>
+          </button>
+        `).join("");
+      }
+
+      const selected = modalitySlots.find((slot) => slot.key === selectedSlotKey);
+      attendanceTitle.textContent = selected
+        ? `${selected.modality} - ${selected.title} - ${api.timeLabel(selected.start)}-${api.timeLabel(selected.end)}`
+        : "";
+
+      if (!selected) {
+        attendanceTable.innerHTML = `<tr><td colspan="3">Toque em um horario para ver os alunos.</td></tr>`;
+        return;
+      }
+
+      attendanceTable.innerHTML = selected.items.length ? selected.items.map((item) => `
+        <tr>
+          <td>${html(item.student_name)}</td>
+          <td>${html(api.statusLabel(item.attendance_status || "pending"))}</td>
+          <td>
+            <button class="btn-secondary" type="button" style="width:auto; padding:8px 12px;" data-attendance-booking="${item.booking_id}" data-attendance-status="present">Presente</button>
+            <button class="btn-cancel" type="button" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">Ausente</button>
+          </td>
+        </tr>
+      `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horario.</td></tr>`;
+    }
+
+    async function loadRoster() {
+      try {
+        const params = new URLSearchParams({ institutionId, date: attendanceDate.value });
+        const response = await api.request(`/checkin/roster?${params.toString()}`);
+        rosterItems = response.data.items || [];
+        render();
+      } catch (error) {
+        setMessage("#management-message", error.message, "error", error.details);
+      }
+    }
+
+    attendanceModalities.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-attendance-modality]");
+      if (!button) return;
+      selectedModality = button.dataset.attendanceModality;
+      selectedSlotKey = null;
+      render();
+    });
+
+    attendanceSlots.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-attendance-slot]");
+      if (!button) return;
+      selectedSlotKey = button.dataset.attendanceSlot;
+      render();
+    });
+
+    attendanceDate.addEventListener("change", () => {
+      selectedSlotKey = null;
+      loadRoster();
+    });
+
+    attendanceTable.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-attendance-booking]");
+      if (!button) return;
+      setMessage("#management-message", "Atualizando chamada...", "loading");
+      try {
+        const response = await api.request("/checkin/manual", {
+          method: "POST",
+          body: {
+            bookingId: Number(button.dataset.attendanceBooking),
+            status: button.dataset.attendanceStatus
+          }
+        });
+        await loadRoster();
+        setMessage("#management-message", response.message, "success");
+      } catch (error) {
+        setMessage("#management-message", error.message, "error", error.details);
+      }
+    });
+
+    setMessage("#management-message", "Carregando modalidades...", "loading");
+    try {
+      const [institution, classes] = await Promise.all([
+        api.request(`/institutions/${institutionId}`),
+        api.request(`/dojo/classes?institutionId=${institutionId}`)
+      ]);
+      modalityNames = (institution.data.modalities || []).map((item) => item.name);
+      dojoClasses = classes.data || [];
+      await loadRoster();
+      setMessage("#management-message", "", "info");
+    } catch (error) {
+      setMessage("#management-message", error.message, "error", error.details);
+    }
+  }
+
   async function initPerfilAluno() {
     const user = await api.requireAuth(["institution_admin"]);
     if (!user) return;
@@ -1240,7 +1621,9 @@
   async function initPlanos() {
     const user = await api.requireAuth();
     if (!user) return;
-
+    if (user.role === "student" && window.FightPassPlanosAluno) {
+      return window.FightPassPlanosAluno.init(user);
+    }
     const plansList = $("#plans-list");
     const currentAccess = $("#current-access");
     const paymentResult = $("#payment-result");
@@ -1309,7 +1692,12 @@
             <button class="btn-primary" type="button" data-dojo-plan-id="${plan.id}">Gerar mensalidade</button>
           </article>
         `).join("");
-        setMessage("#plans-message", "", "info");
+        const flash = api.consumeFlash();
+        if (flash) {
+          setMessage("#plans-message", flash.message, flash.type);
+        } else {
+          setMessage("#plans-message", "", "info");
+        }
       } catch (error) {
         setMessage("#plans-message", error.message, "error", error.details);
       }
@@ -1495,6 +1883,7 @@
   const pages = {
     login: initLogin,
     cadastro: initCadastro,
+    "cadastro-academia": initCadastroAcademia,
     "recuperar-senha": initRecuperacaoSenha,
     dashboard: initDashboard,
     mapa: initMapa,
@@ -1504,6 +1893,7 @@
     checkin: initCheckin,
     perfil: initPerfil,
     gestao: initGestao,
+    modalidades: initModalidades,
     "perfil-aluno": initPerfilAluno,
     "avaliar-aluno": initAvaliarAluno
   };

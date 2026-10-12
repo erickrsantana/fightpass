@@ -3,7 +3,7 @@
 O **FightPass** é uma plataforma acadêmica desenvolvida como Trabalho de Conclusão de Curso, voltada para a gestão de academias, alunos, aulas e check-ins em instituições de artes marciais.
 
 A aplicação permite que alunos encontrem academias, realizem agendamentos de aulas, façam check-in por token ou QR Code e acompanhem suas informações dentro da plataforma. Também oferece recursos administrativos para gestores e instrutores acompanharem alunos, turmas, avaliações, planos e dados gerenciais.
-
+a
 ## Tecnologias Utilizadas
 
 O projeto foi desenvolvido utilizando as seguintes tecnologias:

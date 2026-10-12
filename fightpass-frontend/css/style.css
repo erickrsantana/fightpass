@@ -809,3 +809,7 @@ table tbody tr:hover {
         min-height: 360px;
     }
 }
+
+[hidden] {
+    display: none !important;
+}

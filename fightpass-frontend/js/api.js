@@ -53,7 +53,8 @@
     return {
       student: "Aluno",
       instructor: "Instrutor",
-      institution_admin: "Administrador"
+      institution_admin: "Administrador",
+      platform_admin: "FightPass"
     }[role] || "Usuário";
   }
 
@@ -122,6 +123,10 @@
   function redirectByRole(user) {
     if (!user) {
       window.location.href = "login.html";
+      return;
+    }
+    if (user.role === "platform_admin") {
+      window.location.href = "plataforma.html";
       return;
     }
     window.location.href = user.role === "student" ? "dashboard.html" : "gestao.html";

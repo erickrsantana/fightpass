@@ -118,7 +118,7 @@ router.get(
     const orderBy = hasReferencePoint ? "distance_km IS NULL, distance_km, i.name" : "i.name";
 
     const data = await db.query(
-      `SELECT DISTINCT i.id, i.name, i.description, i.phone, i.email, i.status,
+      `SELECT DISTINCT i.id, i.name, i.logo_url, i.description, i.phone, i.email, i.status,
               a.street, a.number, a.complement, a.city, a.state, a.neighborhood,
               a.zip_code, a.formatted_address, a.latitude, a.longitude, a.geocoding_status
               ${distanceSelect}
@@ -152,7 +152,7 @@ router.get(
   "/institutions/:id",
   asyncHandler(async (req, res) => {
     const rows = await db.query(
-      `SELECT i.id, i.name, i.description, i.phone, i.email, i.status,
+      `SELECT i.id, i.name, i.logo_url, i.description, i.phone, i.email, i.status,
               a.street, a.number, a.complement, a.neighborhood, a.city, a.state,
               a.zip_code, a.formatted_address, a.latitude, a.longitude, a.geocoding_status
        FROM institutions i

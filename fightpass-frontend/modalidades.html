@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Modalidades</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="modalidades">
+    <main class="main-content">
+        <header class="page-hero page-hero-schedule">
+            <h1 style="font-size: 28px; color: #1E293B;">Modalidades</h1>
+            <p>Escolha a modalidade, depois o horario, e veja os alunos da aula.</p>
+        </header>
+
+        <div id="management-message" hidden></div>
+
+        <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
+            <div class="button-row" style="justify-content: space-between; margin-bottom: 16px;">
+                <h2 style="font-size: 18px; color: #1E293B;">1. Modalidades da academia</h2>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="attendance-date">Data</label>
+                    <input id="attendance-date" type="date" class="input-field">
+                </div>
+            </div>
+            <div id="attendance-modalities" class="button-row" style="gap: 10px; flex-wrap: wrap;"></div>
+        </section>
+
+        <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 18px; margin-bottom: 16px; color: #1E293B;">2. Horarios</h2>
+            <div id="attendance-slots" class="button-row" style="gap: 10px; flex-wrap: wrap;"></div>
+        </section>
+
+        <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 18px; margin-bottom: 8px; color: #1E293B;">3. Alunos do horario</h2>
+            <h3 id="attendance-slot-title" style="font-size: 15px; color: #64748B; margin-bottom: 16px;"></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Presenca</th>
+                        <th>Acao</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-table"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/pages.js"></script>
+</body>
+</html>

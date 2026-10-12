@@ -10,6 +10,8 @@ const dashboardRoutes = require("./modules/dashboard");
 const accessRoutes = require("./modules/access");
 const dojoRoutes = require("./modules/dojo");
 const termsRoutes = require("./modules/terms");
+const financeRoutes = require("./modules/finance");
+const platformRoutes = require("./modules/platform"); // novo
 
 const router = express.Router();
 
@@ -28,5 +30,7 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/", accessRoutes);
 router.use("/dojo", dojoRoutes);
 router.use("/terms", termsRoutes);
+router.use("/finance", financeRoutes);
+router.use("/platform", platformRoutes); // novo
 
 module.exports = router;

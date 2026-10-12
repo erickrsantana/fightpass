@@ -56,6 +56,37 @@ async function findPlan(planId) {
   return rows[0] || null;
 }
 
+// Multa por trocar de plano: percentual do valor do plano atual (padrao 20%). Configuravel no .env.
+const CHANGE_FEE_PERCENT = Number(process.env.PLAN_CHANGE_FEE_PERCENT || 20);
+
+function formatMoney(cents) {
+  return (Number(cents) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// Plano pago ainda em uso: ativo, dentro da validade e com treinos sobrando.
+// Plano gratuito (teste), vencido ou com todos os treinos usados nao entra aqui.
+async function findPaidPlanInUse(userId) {
+  const rows = await db.query(
+    `SELECT sap.id, sap.plan_id, ap.name AS plan_name, ap.price_cents
+     FROM student_access_passes sap
+     INNER JOIN access_plans ap ON ap.id = sap.plan_id
+     WHERE sap.student_id = ?
+       AND sap.source = 'payment'
+       AND sap.status = 'active'
+       AND sap.expires_at > NOW()
+       AND (sap.sessions_total IS NULL OR sap.sessions_used < sap.sessions_total)
+     ORDER BY sap.expires_at DESC, sap.id DESC
+     LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+function changeFeeCents(current, targetPlanId) {
+  if (!current || Number(current.plan_id) === Number(targetPlanId)) return 0;
+  return Math.round(Number(current.price_cents) * CHANGE_FEE_PERCENT / 100);
+}
+
 router.get(
   "/plans",
   auth(["student"]),
@@ -76,8 +107,9 @@ router.get(
   auth(["student"]),
   asyncHandler(async (req, res) => {
     const activePass = await getActiveAccessPass(req.user.sub, 1);
+    const paidInUse = await findPaidPlanInUse(req.user.sub);
     const payments = await db.query(
-      `SELECT ps.id, ps.method, ps.amount_cents, ps.status, ps.pix_code, ps.boleto_code, ps.paid_at, ps.created_at,
+      `SELECT ps.id, ps.method, ps.amount_cents, ps.penalty_cents, ps.status, ps.pix_code, ps.boleto_code, ps.paid_at, ps.created_at,
               ap.name AS plan_name, ap.code AS plan_code
        FROM payment_simulations ps
        INNER JOIN access_plans ap ON ap.id = ps.plan_id
@@ -90,6 +122,13 @@ router.get(
     return success(res, {
       hasActiveAccess: Boolean(activePass),
       access: activePass,
+      planChange: {
+        feePercent: CHANGE_FEE_PERCENT,
+        hasPaidPlanInUse: Boolean(paidInUse),
+        currentPlanId: paidInUse ? paidInUse.plan_id : null,
+        currentPlanName: paidInUse ? paidInUse.plan_name : null,
+        feeCents: paidInUse ? Math.round(Number(paidInUse.price_cents) * CHANGE_FEE_PERCENT / 100) : 0
+      },
       payments
     }, "Acesso do aluno carregado com sucesso");
   })
@@ -135,7 +174,8 @@ router.post(
   auth(["student"]),
   [
     body("planId").isInt({ min: 1 }).withMessage("Plano invalido"),
-    body("method").isIn(PAYMENT_METHODS).withMessage("Metodo de pagamento invalido")
+    body("method").isIn(PAYMENT_METHODS).withMessage("Metodo de pagamento invalido"),
+    body("acceptPenalty").optional().isBoolean().withMessage("Confirmacao de multa invalida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -143,6 +183,17 @@ router.post(
     if (!plan || plan.code === "trial_1_day") {
       throw new ApiError(404, "Plano nao encontrado");
     }
+
+    // Trocar um plano pago que ainda esta em uso gera multa; o aluno precisa confirmar.
+    const currentPlan = await findPaidPlanInUse(req.user.sub);
+    const penaltyCents = changeFeeCents(currentPlan, plan.id);
+    if (penaltyCents > 0 && req.body.acceptPenalty !== true && req.body.acceptPenalty !== "true") {
+      throw new ApiError(
+        409,
+        `Trocar de plano gera multa de ${formatMoney(penaltyCents)} (${CHANGE_FEE_PERCENT}% do plano atual ${currentPlan.plan_name}). Confirme para continuar.`
+      );
+    }
+    const totalCents = plan.price_cents + penaltyCents;
 
     const connection = await db.pool.getConnection();
 
@@ -158,14 +209,14 @@ router.post(
       }, connection);
 
       const [insertPayment] = await connection.execute(
-        `INSERT INTO payment_simulations (student_id, plan_id, method, amount_cents, terms_acceptance_id, status)
-         VALUES (?, ?, ?, ?, ?, 'pending')`,
-        [req.user.sub, plan.id, req.body.method, plan.price_cents, termsAcceptance.id]
+        `INSERT INTO payment_simulations (student_id, plan_id, method, amount_cents, penalty_cents, terms_acceptance_id, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+        [req.user.sub, plan.id, req.body.method, totalCents, penaltyCents, termsAcceptance.id]
       );
 
       const paymentId = insertPayment.insertId;
       const pixCode = req.body.method === "pix"
-        ? buildPixCode({ paymentId, amountCents: plan.price_cents })
+        ? buildPixCode({ paymentId, amountCents: totalCents })
         : null;
       const boletoCode = req.body.method === "boleto" ? buildBoletoCode(paymentId) : null;
       const referenceCode = ["credit_card", "debit_card", "transfer"].includes(req.body.method)
@@ -180,6 +231,7 @@ router.post(
       await auditLog(req.user.sub, "payments.simulate", "payment_simulations", paymentId, {
         planId: plan.id,
         method: req.body.method,
+        penaltyCents,
         termsAcceptanceId: termsAcceptance.id,
         prototype: true
       }, connection);
@@ -190,7 +242,9 @@ router.post(
         id: paymentId,
         plan: serializePlan(plan),
         method: req.body.method,
-        amountCents: plan.price_cents,
+        amountCents: totalCents,
+        basePriceCents: plan.price_cents,
+        penaltyCents,
         status: "pending",
         pixCode,
         boletoCode,
@@ -215,7 +269,7 @@ router.post(
     try {
       await connection.beginTransaction();
       const [paymentRows] = await connection.execute(
-        `SELECT ps.id, ps.student_id, ps.plan_id, ps.status, ps.terms_acceptance_id,
+        `SELECT ps.id, ps.student_id, ps.plan_id, ps.status, ps.terms_acceptance_id, ps.penalty_cents,
                 ap.code, ap.name, ap.price_cents, ap.session_limit, ap.duration_days
          FROM payment_simulations ps
          INNER JOIN access_plans ap ON ap.id = ps.plan_id
@@ -230,7 +284,7 @@ router.post(
       }
 
       if (payment.status === "paid") {
-        throw new ApiError(409, "Cobranca já confirmada");
+        throw new ApiError(409, "Cobranca ja confirmada");
       }
 
       if (payment.status !== "pending") {
@@ -248,6 +302,16 @@ router.post(
         [req.user.sub, payment.plan_id, payment.duration_days, payment.session_limit]
       );
 
+      // Troca com multa: o plano pago anterior deixa de valer.
+      if (Number(payment.penalty_cents) > 0) {
+        await connection.execute(
+          `UPDATE student_access_passes
+           SET status = 'cancelled'
+           WHERE student_id = ? AND source = 'payment' AND status = 'active' AND id <> ?`,
+          [req.user.sub, passResult.insertId]
+        );
+      }
+
       await connection.execute(
         `UPDATE payment_simulations
          SET status = 'paid', paid_at = NOW(), access_pass_id = ?
@@ -257,6 +321,7 @@ router.post(
 
       await auditLog(req.user.sub, "payments.confirm", "payment_simulations", payment.id, {
         accessPassId: passResult.insertId,
+        penaltyCents: Number(payment.penalty_cents) || 0,
         prototype: true
       }, connection);
 

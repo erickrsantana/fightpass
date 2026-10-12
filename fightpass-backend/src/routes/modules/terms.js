@@ -1,13 +1,27 @@
 const express = require("express");
 const { body } = require("express-validator");
 const { asyncHandler, success, validateRequest, auth } = require("../../lib/http");
-const { getCurrentTerms, ensureTermsAccepted } = require("../../services/termsService");
+const { getCurrentTerms, ensureTermsAccepted, findCurrentAcceptance } = require("../../services/termsService");
 
 const router = express.Router();
 
 router.get(
   "/current",
   asyncHandler(async (req, res) => success(res, getCurrentTerms(), "Termos de Uso carregados com sucesso"))
+);
+
+// Informa se o usuario logado ja aceitou a versao atual dos termos (usado no primeiro acesso).
+router.get(
+  "/status",
+  auth(),
+  asyncHandler(async (req, res) => {
+    const acceptance = await findCurrentAcceptance(req.user.sub);
+    return success(res, {
+      accepted: Boolean(acceptance),
+      version: getCurrentTerms().version,
+      acceptedAt: acceptance ? acceptance.accepted_at : null
+    }, "Status dos Termos de Uso carregado com sucesso");
+  })
 );
 
 router.post(

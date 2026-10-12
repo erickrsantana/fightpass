@@ -16,6 +16,9 @@ const { auditLog, getUserInstitutions } = require("../../lib/business");
 const { createTrialAccess, isValidCpf, onlyDigits } = require("../../lib/access");
 const { requestPasswordReset, resetPassword } = require("../../services/passwordResetService");
 const { assertTermsAccepted, recordTermsAcceptance } = require("../../services/termsService");
+const { resolveCep } = require("../../services/locationService");
+
+const INSTITUTION_MODALITY_SLUGS = ["boxe", "jiu-jitsu", "judo", "muay-thai", "mma", "karate", "taekwondo"];
 
 const router = express.Router();
 
@@ -100,17 +103,34 @@ router.post(
         if (accountType === "student" && !isValidCpf(value)) {
           throw new Error("CPF invalido para cadastro de aluno");
         }
+        if (accountType === "institution_admin" && ![11, 14].includes(onlyDigits(value).length)) {
+          throw new Error("Informe um CPF ou CNPJ valido para cadastrar a academia");
+        }
         return true;
       }),
     body("accountType")
       .optional()
-      .equals("student")
-      .withMessage("Cadastro publico disponivel apenas para alunos"),
+      .isIn(["student", "institution_admin"])
+      .withMessage("Cadastro publico disponivel para alunos e academias"),
     body("gender")
       .optional({ checkFalsy: true })
       .isIn(["female", "male", "non_binary", "prefer_not_to_say", "other"])
       .withMessage("Genero invalido"),
-    body("institutionName").optional({ checkFalsy: true }).trim().isLength({ min: 3 }).withMessage("Nome da instituicao invalido")
+    body("institutionName")
+      .if(body("accountType").equals("institution_admin"))
+      .trim()
+      .isLength({ min: 3 })
+      .withMessage("Informe o nome da academia"),
+    body("zipCode")
+      .if(body("accountType").equals("institution_admin"))
+      .custom((value) => onlyDigits(value).length === 8)
+      .withMessage("Informe um CEP valido da academia"),
+    body("number")
+      .if(body("accountType").equals("institution_admin"))
+      .trim()
+      .notEmpty()
+      .withMessage("Informe o numero do endereco da academia"),
+    body("modalities").optional().isArray().withMessage("Modalidades invalidas")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -142,6 +162,16 @@ router.post(
     const role = roles[0];
     if (!role) {
       throw new ApiError(400, "Perfil de usuario invalido");
+    }
+
+    let resolvedAddress = null;
+    if (accountType === "institution_admin") {
+      try {
+        resolvedAddress = await resolveCep(req.body.zipCode, req.body.number, req.body.complement || null);
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(502, "Nao foi possivel consultar o CEP agora. Tente novamente em instantes.");
+      }
     }
 
     const connection = await db.pool.getConnection();
@@ -179,12 +209,39 @@ router.post(
           [institutionId, insertUser.insertId]
         );
 
+        const requestedSlugs = (Array.isArray(req.body.modalities) ? req.body.modalities : [])
+          .filter((slug) => INSTITUTION_MODALITY_SLUGS.includes(slug));
+        const slugs = requestedSlugs.length ? requestedSlugs : INSTITUTION_MODALITY_SLUGS;
+
         await connection.execute(
           `INSERT IGNORE INTO institution_modality (institution_id, modality_id)
            SELECT ?, id
            FROM modalities
-           WHERE slug IN ('boxe', 'jiu-jitsu', 'judo', 'muay-thai', 'mma', 'karate', 'taekwondo')`,
-          [institutionId]
+           WHERE slug IN (${slugs.map(() => "?").join(", ")})`,
+          [institutionId, ...slugs]
+        );
+
+        await connection.execute(
+          `INSERT INTO addresses
+             (institution_id, street, number, complement, neighborhood, city, state, zip_code,
+              formatted_address, latitude, longitude, geocoding_provider, geocoding_status, geocoded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            institutionId,
+            resolvedAddress.street || "",
+            req.body.number,
+            req.body.complement || null,
+            resolvedAddress.neighborhood || "",
+            resolvedAddress.city,
+            resolvedAddress.state,
+            resolvedAddress.zipCode,
+            resolvedAddress.formattedAddress,
+            resolvedAddress.latitude,
+            resolvedAddress.longitude,
+            resolvedAddress.geocodingProvider,
+            resolvedAddress.geocodingStatus,
+            resolvedAddress.geocodedAt
+          ]
         );
       }
 
@@ -221,7 +278,8 @@ router.post(
         user: await serializeUser(user),
         token,
         institutionId,
-        access
+        access,
+        geocodingStatus: resolvedAddress ? resolvedAddress.geocodingStatus : null
       }, "Conta criada com sucesso");
     } catch (error) {
       await connection.rollback();
