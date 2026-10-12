@@ -1,6 +1,8 @@
 const mysql = require("mysql2/promise");
 const env = require("../config/env");
 
+const useSsl = String(process.env.DB_SSL || "").toLowerCase() === "true";
+
 const pool = mysql.createPool({
   host: env.db.host,
   port: env.db.port,
@@ -12,7 +14,8 @@ const pool = mysql.createPool({
   queueLimit: 0,
   timezone: "Z",
   decimalNumbers: true,
-  multipleStatements: true
+  multipleStatements: true,
+  ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {})
 });
 
 async function query(sql, params = []) {
