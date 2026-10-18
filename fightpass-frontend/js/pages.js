@@ -75,10 +75,14 @@
     if (!value) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const target = new Date(value);
+    // Usa so a data (AAAA-MM-DD) como dia do calendario local, sem deslocar pelo fuso.
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const target = match
+      ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+      : new Date(value);
     if (Number.isNaN(target.getTime())) return null;
     target.setHours(0, 0, 0, 0);
-    return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+    return Math.round((target.getTime() - today.getTime()) / 86400000);
   }
 
   function isTomorrow(value) {
