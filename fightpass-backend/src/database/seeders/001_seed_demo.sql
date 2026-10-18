@@ -1,8 +1,7 @@
 INSERT IGNORE INTO roles (id, code, name) VALUES
   (1, 'student', 'Aluno'),
   (2, 'instructor', 'Instrutor'),
-  (3, 'institution_admin', 'Administrador da Instituição'),
-  (4, 'staff', 'Equipe de Apoio');
+  (3, 'institution_admin', 'Administrador da Instituição');
 
 INSERT IGNORE INTO modalities (id, name, slug, description) VALUES
   (1, 'Boxe', 'boxe', 'Treinamento de boxe'),

@@ -5,7 +5,9 @@ const { asyncHandler, created, success, validateRequest, auth, ApiError } = requ
 const {
   auditLog,
   ensureInstitutionAccess,
-  ensureInstitutionModality
+  ensureInstitutionModality,
+  ensureInstitutionInstructor,
+  resolveInstitutionModality
 } = require("../../lib/business");
 const { ensureActiveInstitutionSubscription } = require("../../services/dojoSubscriptionService");
 
@@ -50,10 +52,12 @@ router.get(
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const data = await db.query(
       `SELECT c.id, c.institution_id, c.modality_id, c.title, c.description, c.capacity, c.status,
-              i.name AS institution_name, m.name AS modality_name
+              i.name AS institution_name, m.name AS modality_name,
+              u.name AS instructor_name
        FROM classes c
        INNER JOIN institutions i ON i.id = c.institution_id
        INNER JOIN modalities m ON m.id = c.modality_id
+       LEFT JOIN users u ON u.id = c.instructor_id
        ${where}
        ORDER BY c.title`,
       params
@@ -108,7 +112,9 @@ router.post(
   auth(["institution_admin"]),
   [
     body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
+    body("modalityId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Modalidade invalida"),
+    body("modalityName").optional({ nullable: true }).trim().isLength({ max: 100 }).withMessage("Nome da modalidade muito longo"),
+    body("instructorId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Instrutor invalido"),
     body("title").trim().notEmpty().withMessage("Titulo obrigatorio"),
     body("dayOfWeek").isInt({ min: 0, max: 6 }).withMessage("Dia da semana invalido"),
     body("startTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horario inicial invalido"),
@@ -119,7 +125,15 @@ router.post(
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.body.institutionId, ["institution_admin"]);
     await ensureActiveInstitutionSubscription(req.body.institutionId);
-    await ensureInstitutionModality(req.body.institutionId, req.body.modalityId);
+    const modalityId = await resolveInstitutionModality(
+      req.body.institutionId,
+      req.body.modalityId,
+      req.body.modalityName
+    );
+    const instructorId = req.body.instructorId ? Number(req.body.instructorId) : null;
+    if (instructorId) {
+      await ensureInstitutionInstructor(req.body.institutionId, instructorId);
+    }
 
     const startTime = normalizeTime(req.body.startTime);
     const endTime = normalizeTime(req.body.endTime);
@@ -133,11 +147,12 @@ router.post(
     try {
       await connection.beginTransaction();
       const [classInsert] = await connection.execute(
-        `INSERT INTO classes (institution_id, modality_id, title, description, capacity, status)
-         VALUES (?, ?, ?, ?, ?, 'active')`,
+        `INSERT INTO classes (institution_id, modality_id, instructor_id, title, description, capacity, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'active')`,
         [
           req.body.institutionId,
-          req.body.modalityId,
+          modalityId,
+          instructorId,
           req.body.title,
           req.body.description || null,
           req.body.capacity
@@ -158,7 +173,8 @@ router.post(
 
       await auditLog(req.user.sub, "classes.create", "classes", classInsert.insertId, {
         institutionId: req.body.institutionId,
-        modalityId: req.body.modalityId,
+        modalityId,
+        instructorId,
         dayOfWeek: req.body.dayOfWeek,
         startTime,
         endTime
@@ -183,6 +199,7 @@ router.put(
   [
     param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
     body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
+    body("instructorId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Instrutor invalido"),
     body("title").trim().notEmpty().withMessage("Titulo obrigatorio"),
     body("description").optional({ nullable: true }).trim(),
     body("capacity").isInt({ min: 1 }).withMessage("Capacidade invalida"),
@@ -195,12 +212,21 @@ router.put(
     await ensureActiveInstitutionSubscription(classData.institution_id);
     await ensureInstitutionModality(classData.institution_id, req.body.modalityId);
 
+    const hasInstructor = Object.prototype.hasOwnProperty.call(req.body, "instructorId");
+    const newInstructorId = req.body.instructorId ? Number(req.body.instructorId) : null;
+    if (hasInstructor && newInstructorId) {
+      await ensureInstitutionInstructor(classData.institution_id, newInstructorId);
+    }
+
     await db.query(
       `UPDATE classes
-       SET modality_id = ?, title = ?, description = ?, capacity = ?, status = ?
+       SET modality_id = ?, instructor_id = CASE WHEN ? THEN ? ELSE instructor_id END,
+           title = ?, description = ?, capacity = ?, status = ?
        WHERE id = ?`,
       [
         req.body.modalityId,
+        hasInstructor ? 1 : 0,
+        newInstructorId,
         req.body.title,
         req.body.description || null,
         req.body.capacity,

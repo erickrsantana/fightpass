@@ -142,6 +142,8 @@ router.get(
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.query.institutionId);
     const date = req.query.date || new Date().toISOString().slice(0, 10);
+    // Instrutor so ve a chamada das turmas em que e o professor responsavel.
+    const onlyMine = req.user.role === "instructor";
     const data = await db.query(
       `SELECT b.id AS booking_id, b.booking_date, b.status AS booking_status,
               u.id AS student_id, u.name AS student_name, u.avatar_url,
@@ -157,8 +159,9 @@ router.get(
        WHERE c.institution_id = ?
          AND b.booking_date = ?
          AND b.status <> 'cancelled'
+         ${onlyMine ? "AND c.instructor_id = ?" : ""}
        ORDER BY cs.start_time, c.title, u.name`,
-      [req.query.institutionId, date]
+      onlyMine ? [req.query.institutionId, date, req.user.sub] : [req.query.institutionId, date]
     );
 
     return success(res, { date, items: data }, "Chamada carregada com sucesso");
@@ -175,7 +178,7 @@ router.post(
   validateRequest,
   asyncHandler(async (req, res) => {
     const rows = await db.query(
-      `SELECT b.id, b.student_id, c.institution_id
+      `SELECT b.id, b.student_id, c.institution_id, c.instructor_id
        FROM bookings b
        INNER JOIN class_schedules cs ON cs.id = b.class_schedule_id
        INNER JOIN classes c ON c.id = cs.class_id
@@ -189,6 +192,9 @@ router.post(
     }
 
     await ensureInstitutionAccess(req.user.sub, booking.institution_id);
+    if (req.user.role === "instructor" && Number(booking.instructor_id) !== Number(req.user.sub)) {
+      throw new ApiError(403, "Somente o professor responsavel pela turma faz a chamada dela");
+    }
     const connection = await db.pool.getConnection();
 
     try {

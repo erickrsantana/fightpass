@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Meus Pagamentos</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="meus-pagamentos">
+    <main class="main-content">
+        <header class="page-hero">
+            <h1 style="font-size: 28px;">Meus pagamentos</h1>
+            <p>Acompanhe suas cobrancas, pagamentos aprovados e comprovantes.</p>
+        </header>
+        <div id="pay-message" hidden></div>
+        <section id="pay-totals" class="stat-grid"></section>
+        <section class="card-white" style="margin-top: 24px;">
+            <div class="scroll-box" style="max-height: 520px;">
+                <table class="table">
+                    <thead><tr><th>Data</th><th>Plano</th><th>Forma</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+                    <tbody id="pay-rows"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/pagamentos-aluno.js"></script>
+</body>
+</html>

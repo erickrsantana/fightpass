@@ -71,11 +71,14 @@ function passwordResetTemplate({ name, resetUrl }) {
 }
 
 async function sendPasswordResetEmail({ to, name, token }) {
+  const resetUrl = buildPasswordResetUrl(token);
   if (!env.email.smtpUser || !env.email.smtpPass) {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[email] (modo desenvolvimento) Link de redefinicao para ${to}: ${resetUrl}`);
+    }
     return { skipped: true, reason: "SMTP_USER ou SMTP_PASS ausente" };
   }
 
-  const resetUrl = buildPasswordResetUrl(token);
   const transporter = nodemailer.createTransport({
     host: env.email.smtpHost,
     port: env.email.smtpPort,

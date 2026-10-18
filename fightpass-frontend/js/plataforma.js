@@ -5,7 +5,6 @@
     student: "Alunos",
     instructor: "Instrutores",
     institution_admin: "Gestores de academia",
-    staff: "Equipe de apoio",
     platform_admin: "Equipe FightPass"
   };
 

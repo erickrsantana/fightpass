@@ -10,7 +10,7 @@
     <main class="main-content">
         <header class="page-hero page-hero-schedule">
             <h1 style="font-size: 28px; color: #1E293B;">Gestão da instituição</h1>
-            <p>Administradores gerenciam o DOJO; instrutores visualizam alunos e horarios. A chamada fica na aba Modalidades.</p>
+            <p>Administradores gerenciam o DOJO. Instrutores veem apenas as suas turmas; a chamada fica na aba Modalidades.</p>
         </header>
 
         <div id="management-message" hidden></div>
@@ -38,6 +38,40 @@
         </section>
 
         <section class="card-white" style="padding: 24px; margin-bottom: 24px;" data-admin-only>
+            <h2 style="font-size: 18px; margin-bottom: 8px; color: #1E293B;">Instrutores</h2>
+            <p class="muted-note" style="margin-bottom: 14px;">Somente a academia cria o acesso do professor. Passe a ele o e-mail e a senha provisoria.</p>
+            <form id="instructor-form" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;">
+                <div class="input-group">
+                    <label for="instructor-name">Nome</label>
+                    <input id="instructor-name" name="name" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label for="instructor-email">E-mail</label>
+                    <input id="instructor-email" name="email" type="email" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label for="instructor-document">CPF</label>
+                    <input id="instructor-document" name="document" class="input-field" required placeholder="000.000.000-00">
+                </div>
+                <div class="input-group">
+                    <label for="instructor-phone">Telefone</label>
+                    <input id="instructor-phone" name="phone" class="input-field" placeholder="(11) 99999-9999">
+                </div>
+                <div class="input-group">
+                    <label for="instructor-password">Senha provisoria</label>
+                    <input id="instructor-password" name="password" type="text" class="input-field" required minlength="8" placeholder="Min. 8, com maiuscula, minuscula e numero">
+                </div>
+                <button class="btn-primary" type="submit" style="align-self:end; width:auto; justify-self:start; padding: 13px 22px;">Criar instrutor</button>
+            </form>
+            <div class="scroll-box small" style="margin-top: 16px;">
+                <table class="table">
+                    <thead><tr><th>Nome</th><th>E-mail</th><th>Turmas</th><th>Status</th><th>Acao</th></tr></thead>
+                    <tbody id="instructors-table"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card-white" style="padding: 24px; margin-bottom: 24px;" data-admin-only>
             <h2 style="font-size: 18px; margin-bottom: 16px; color: #1E293B;">Disponibilizar aula</h2>
             <form id="dojo-class-form" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;">
                 <div class="input-group">
@@ -47,6 +81,10 @@
                 <div class="input-group">
                     <label for="class-modality">Modalidade</label>
                     <select id="class-modality" name="modalityId" class="input-field" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="class-instructor">Professor responsavel</label>
+                    <select id="class-instructor" name="instructorId" class="input-field"></select>
                 </div>
                 <div class="input-group">
                     <label for="class-capacity">Capacidade</label>
@@ -91,6 +129,7 @@
                     <tr>
                         <th>Aula</th>
                         <th>Modalidade</th>
+                        <th>Instrutor</th>
                         <th>Horários</th>
                         <th>Status</th>
                         <th>Ação</th>
@@ -115,7 +154,7 @@
             </div>
         </div>
 
-        <div class="card-white" style="padding: 30px;">
+        <div class="card-white" style="padding: 30px;" data-admin-only>
             <h2 style="font-size: 18px; margin-bottom: 20px; color: #1E293B;">Lista de alunos</h2>
             <table>
                 <thead>

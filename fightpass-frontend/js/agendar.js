@@ -78,6 +78,7 @@
     let selectedInstitution = null;
     let schedules = [];
     let selectedSchedule = null;
+    let modalityFilter = "";
 
     function dateMatchesSchedule(value) {
       if (!selectedSchedule || !value) return true;
@@ -156,19 +157,27 @@
         classesList.innerHTML = `<div class="empty-state">Esta academia ainda nao tem aulas ativas.</div>`;
         return;
       }
+      const modalityNames = Array.from(new Set(schedules.map((item) => item.modality_name)));
+      const chips = modalityNames.length > 1 ? `
+        <div class="chip-row">
+          <button type="button" class="chip${modalityFilter ? "" : " active"}" data-modality="">Todas</button>
+          ${modalityNames.map((name) => `<button type="button" class="chip${modalityFilter === name ? " active" : ""}" data-modality="${html(name)}">${html(name)}</button>`).join("")}
+        </div>` : "";
+      const where = [[selectedInstitution.street, selectedInstitution.number].filter(Boolean).join(", "), selectedInstitution.neighborhood, selectedInstitution.city]
+        .filter(Boolean).join(" - ");
       const groups = new Map();
-      schedules.forEach((item) => {
+      schedules.filter((item) => !modalityFilter || item.modality_name === modalityFilter).forEach((item) => {
         if (!groups.has(item.modality_name)) groups.set(item.modality_name, []);
         groups.get(item.modality_name).push(item);
       });
-      classesList.innerHTML = Array.from(groups.entries()).map(([modality, items]) => `
+      classesList.innerHTML = chips + `<p class="class-place">📍 <strong>${html(selectedInstitution.name)}</strong>${where ? ` &middot; ${html(where)}` : ""}</p>` + Array.from(groups.entries()).map(([modality, items]) => `
         <div style="margin-bottom: 20px;">
           <h3 style="font-size: 16px; margin-bottom: 10px; color: #1E293B;">${html(modality)}</h3>
           <div class="button-row" style="gap: 10px;">
             ${items.map((item) => `
               <button type="button" class="${selectedSchedule && selectedSchedule.schedule.id === item.schedule.id ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:10px 16px; text-align:left;" data-schedule-id="${item.schedule.id}">
                 ${html(api.dayLabel(item.schedule.day_of_week))} ${html(api.timeLabel(item.schedule.start_time))}-${html(api.timeLabel(item.schedule.end_time))}<br>
-                <small>${html(item.title)}</small>
+                <small>${html(item.title)}${item.schedule.room_name ? ` &middot; ${html(item.schedule.room_name)}` : ""}${item.instructor_name ? ` &middot; Prof. ${html(item.instructor_name)}` : ""}</small>
               </button>
             `).join("")}
           </div>
@@ -197,6 +206,7 @@
       if (!found) return;
       selectedInstitution = found;
       selectedSchedule = null;
+      modalityFilter = "";
       bookingSection.hidden = true;
       renderInstitutions();
       classesSection.hidden = false;
@@ -229,6 +239,12 @@
     });
 
     classesList.addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-modality]");
+      if (chip) {
+        modalityFilter = chip.dataset.modality;
+        renderClasses();
+        return;
+      }
       const button = event.target.closest("[data-schedule-id]");
       if (!button) return;
       const item = schedules.find((entry) => String(entry.schedule.id) === button.dataset.scheduleId);
@@ -280,11 +296,33 @@
             body: { ...payload, bookingDate: bookingDate.value }
           });
         const total = Array.isArray(response.data) ? response.data.length : 1;
-        setMessage(`${response.message} (${total} aula${total > 1 ? "s" : ""}).`, "success");
+        setMessage("", "info");
+        showBookingSuccess(total);
       } catch (error) {
         setMessage(error.message, "error", error.details);
       }
     });
+
+    function showBookingSuccess(total) {
+      const overlay = document.createElement("div");
+      overlay.className = "booking-success-overlay";
+      overlay.innerHTML = `
+        <div class="booking-success-card">
+          <div class="success-check big"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M14 27l8 8 16-17"/></svg></div>
+          <h2>Aula agendada!</h2>
+          <p><strong>${html(selectedSchedule.title)}</strong> &middot; ${html(selectedSchedule.modality_name)}</p>
+          <p>${html(selectedInstitution.name)}${selectedSchedule.schedule.room_name ? ` &middot; ${html(selectedSchedule.schedule.room_name)}` : ""}</p>
+          <p>${html(api.dayLabel(selectedSchedule.schedule.day_of_week))} ${html(api.timeLabel(selectedSchedule.schedule.start_time))} &middot; ${total} aula${total > 1 ? "s" : ""} reservada${total > 1 ? "s" : ""}</p>
+          <div class="button-row" style="justify-content:center;margin-top:16px;">
+            <a class="btn-primary" style="width:auto;padding:12px 24px;display:inline-block;" href="minhas-aulas.html">Ver minhas aulas</a>
+            <button type="button" class="btn-secondary" style="width:auto;padding:12px 24px;" data-close-success>Agendar outra</button>
+          </div>
+        </div>`;
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay || event.target.closest("[data-close-success]")) overlay.remove();
+      });
+      document.body.appendChild(overlay);
+    }
 
     // Primeiro carrega a lista (sem distancia) e depois tenta usar a localizacao do aluno.
     await loadInstitutions();

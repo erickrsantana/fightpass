@@ -45,7 +45,7 @@ module.exports = {
     smtpUser: process.env.SMTP_USER || "",
     smtpPass: process.env.SMTP_PASS || "",
     from: process.env.EMAIL_FROM || "FightPass <seu-email@exemplo.com>",
-    passwordResetUrl: process.env.PASSWORD_RESET_URL || "http://127.0.0.1:5500/fightpass-frontend/redefinir-senha.html"
+    passwordResetUrl: process.env.PASSWORD_RESET_URL || "http://localhost:5500/redefinir-senha.html"
   },
   location: {
     googleGeocodingApiKey: process.env.GOOGLE_GEOCODING_API_KEY || "",

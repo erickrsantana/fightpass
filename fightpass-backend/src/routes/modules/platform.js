@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../../database/connection");
-const { asyncHandler, success, auth } = require("../../lib/http");
+const { ApiError, asyncHandler, success, auth } = require("../../lib/http");
+const { auditLog, getUserInstitutions } = require("../../lib/business");
 
 const router = express.Router();
 const onlyPlatform = auth(["platform_admin"]);
@@ -91,7 +92,7 @@ router.get(
       `SELECT i.id, i.name, i.logo_url, i.status,
               a.neighborhood, a.city, a.state, a.latitude, a.longitude,
               (SELECT COUNT(DISTINCT e.student_id) FROM enrollments e WHERE e.institution_id = i.id) AS students_count,
-              (SELECT COUNT(*) FROM institution_user iu WHERE iu.institution_id = i.id AND iu.status = 'active') AS staff_count
+              (SELECT COUNT(*) FROM institution_user iu WHERE iu.institution_id = i.id AND iu.status = 'active' AND iu.membership_role = 'instructor') AS instructors_count
        FROM institutions i
        LEFT JOIN addresses a ON a.institution_id = i.id
        WHERE i.status = 'active'
@@ -102,7 +103,7 @@ router.get(
       rows.map((row) => ({
         ...row,
         students_count: Number(row.students_count),
-        staff_count: Number(row.staff_count)
+        instructors_count: Number(row.instructors_count)
       })),
       "Academias carregadas com sucesso"
     );
@@ -316,6 +317,257 @@ router.get(
       },
       "Financeiro carregado com sucesso"
     );
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Usuarios: lista com busca/filtro e ficha completa
+// ---------------------------------------------------------------------------
+const ROLE_FILTERS = ["student", "instructor", "institution_admin", "platform_admin"];
+
+router.get(
+  "/users",
+  onlyPlatform,
+  asyncHandler(async (req, res) => {
+    const role = ROLE_FILTERS.includes(req.query.role) ? req.query.role : null;
+    const q = String(req.query.q || "").trim().slice(0, 80);
+
+    const where = [];
+    const params = [];
+    if (role) {
+      where.push("r.code = ?");
+      params.push(role);
+    }
+    if (q) {
+      const onlyDigits = /^#?\d+$/.test(q);
+      if (onlyDigits) {
+        const number = Number(q.replace("#", ""));
+        where.push("(u.id = ? OR u.document LIKE ? OR u.phone LIKE ?)");
+        params.push(number, `%${q.replace("#", "")}%`, `%${q.replace("#", "")}%`);
+      } else {
+        where.push("(u.name LIKE ? OR u.email LIKE ? OR u.document LIKE ?)");
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      }
+    }
+
+    const users = await db.query(
+      `SELECT u.id, u.name, u.email, u.document, u.phone, u.is_active, u.created_at,
+              (u.avatar_url IS NOT NULL AND u.avatar_url <> '') AS has_avatar,
+              r.code AS role, r.name AS role_name
+       FROM users u
+       INNER JOIN roles r ON r.id = u.role_id
+       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+       ORDER BY u.id DESC
+       LIMIT 500`,
+      params
+    );
+
+    const counts = await db.query(
+      `SELECT r.code AS role, COUNT(u.id) AS total
+       FROM roles r LEFT JOIN users u ON u.role_id = r.id
+       GROUP BY r.code`
+    );
+
+    return success(
+      res,
+      {
+        users: users.map((row) => ({ ...row, has_avatar: Boolean(row.has_avatar) })),
+        counts: Object.fromEntries(counts.map((row) => [row.role, Number(row.total)]))
+      },
+      "Usuarios carregados com sucesso"
+    );
+  })
+);
+
+router.get(
+  "/users/:id",
+  onlyPlatform,
+  asyncHandler(async (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      throw new ApiError(400, "ID invalido");
+    }
+
+    const rows = await db.query(
+      `SELECT u.id, u.name, u.email, u.document, u.phone, u.gender, u.avatar_url,
+              u.is_active, u.created_at, r.code AS role, r.name AS role_name
+       FROM users u INNER JOIN roles r ON r.id = u.role_id
+       WHERE u.id = ? LIMIT 1`,
+      [userId]
+    );
+    const user = rows[0];
+    if (!user) {
+      throw new ApiError(404, "Usuario nao encontrado");
+    }
+
+    const ficha = { user, institutions: await getUserInstitutions(userId) };
+
+    if (user.role === "institution_admin") {
+      ficha.ownedInstitutions = await db.query(
+        `SELECT i.id, i.name, i.status,
+                (SELECT COUNT(DISTINCT e.student_id) FROM enrollments e WHERE e.institution_id = i.id) AS students_count
+         FROM institutions i WHERE i.owner_user_id = ? ORDER BY i.name`,
+        [userId]
+      );
+    }
+
+    if (user.role === "student") {
+      ficha.enrollments = await db.query(
+        `SELECT e.id, e.status, e.started_at, i.name AS institution_name, m.name AS modality_name
+         FROM enrollments e
+         INNER JOIN institutions i ON i.id = e.institution_id
+         INNER JOIN modalities m ON m.id = e.modality_id
+         WHERE e.student_id = ? ORDER BY e.id DESC LIMIT 20`,
+        [userId]
+      );
+      ficha.passes = await db.query(
+        `SELECT sap.id, ap.name AS plan_name, sap.source, sap.status, sap.starts_at, sap.expires_at,
+                sap.sessions_total, sap.sessions_used
+         FROM student_access_passes sap
+         INNER JOIN access_plans ap ON ap.id = sap.plan_id
+         WHERE sap.student_id = ? ORDER BY sap.id DESC LIMIT 20`,
+        [userId]
+      );
+      ficha.payments = await db.query(
+        `SELECT ps.id, ap.name AS plan_name, ps.method, ps.amount_cents,
+                COALESCE(ps.penalty_cents, 0) AS penalty_cents, ps.status, ps.paid_at, ps.created_at
+         FROM payment_simulations ps
+         INNER JOIN access_plans ap ON ap.id = ps.plan_id
+         WHERE ps.student_id = ? ORDER BY ps.id DESC LIMIT 20`,
+        [userId]
+      );
+      ficha.bookings = await db.query(
+        `SELECT b.id, b.booking_date, b.status, c.title, i.name AS institution_name,
+                m.name AS modality_name, a.status AS attendance_status
+         FROM bookings b
+         INNER JOIN class_schedules cs ON cs.id = b.class_schedule_id
+         INNER JOIN classes c ON c.id = cs.class_id
+         INNER JOIN institutions i ON i.id = c.institution_id
+         INNER JOIN modalities m ON m.id = c.modality_id
+         LEFT JOIN attendances a ON a.booking_id = b.id
+         WHERE b.student_id = ?
+         ORDER BY b.booking_date DESC, b.id DESC LIMIT 15`,
+        [userId]
+      );
+      const totals = await db.query(
+        `SELECT COUNT(*) AS bookings_total,
+                COALESCE(SUM(a.status = 'present'), 0) AS present_total
+         FROM bookings b LEFT JOIN attendances a ON a.booking_id = b.id
+         WHERE b.student_id = ? AND b.status <> 'cancelled'`,
+        [userId]
+      );
+      ficha.summary = {
+        bookings: Number(totals[0].bookings_total),
+        present: Number(totals[0].present_total)
+      };
+      ficha.evaluations = await db.query(
+        `SELECT se.score, se.comment, se.created_at, m.name AS modality_name, i.name AS institution_name
+         FROM student_evaluations se
+         INNER JOIN modalities m ON m.id = se.modality_id
+         INNER JOIN institutions i ON i.id = se.institution_id
+         WHERE se.student_user_id = ? ORDER BY se.id DESC LIMIT 10`,
+        [userId]
+      );
+    }
+
+    return success(res, ficha, "Ficha carregada com sucesso");
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Atualizar plano: o novo valor/requisito vale para todos
+// ---------------------------------------------------------------------------
+function readPlanBody(body, { withSessions }) {
+  const name = String(body.name || "").trim();
+  const description = String(body.description || "").trim();
+  const price = Number(body.priceCents);
+  const duration = Number(body.durationDays);
+  if (name.length < 2 || name.length > 100) throw new ApiError(422, "Nome do plano invalido");
+  if (description.length < 3 || description.length > 255) throw new ApiError(422, "Descricao invalida (3 a 255 caracteres)");
+  if (!Number.isInteger(price) || price < 0 || price > 10000000) throw new ApiError(422, "Valor invalido");
+  if (!Number.isInteger(duration) || duration < 1 || duration > 730) throw new ApiError(422, "Validade invalida (1 a 730 dias)");
+
+  const plan = { name, description, price, duration, isActive: body.isActive ? 1 : 0, applyToActive: Boolean(body.applyToActive) };
+  if (withSessions) {
+    if (body.sessionLimit === null || body.sessionLimit === "" || body.sessionLimit === undefined) {
+      plan.sessionLimit = null;
+    } else {
+      const limit = Number(body.sessionLimit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new ApiError(422, "Limite de treinos invalido");
+      plan.sessionLimit = limit;
+    }
+  }
+  return plan;
+}
+
+router.put(
+  "/plans/student/:id",
+  onlyPlatform,
+  asyncHandler(async (req, res) => {
+    const planId = Number(req.params.id);
+    const plan = readPlanBody(req.body || {}, { withSessions: true });
+    const current = await db.query("SELECT id FROM access_plans WHERE id = ? LIMIT 1", [planId]);
+    if (!current[0]) throw new ApiError(404, "Plano nao encontrado");
+
+    await db.query(
+      `UPDATE access_plans
+       SET name = ?, description = ?, price_cents = ?, session_limit = ?, duration_days = ?, is_active = ?
+       WHERE id = ?`,
+      [plan.name, plan.description, plan.price, plan.sessionLimit, plan.duration, plan.isActive, planId]
+    );
+
+    let updatedPasses = 0;
+    if (plan.applyToActive) {
+      const result = await db.query(
+        `UPDATE student_access_passes
+         SET sessions_total = CASE WHEN ? IS NULL THEN NULL ELSE GREATEST(?, sessions_used) END
+         WHERE plan_id = ? AND status = 'active'`,
+        [plan.sessionLimit, plan.sessionLimit, planId]
+      );
+      updatedPasses = Number(result && result.affectedRows) || 0;
+    }
+
+    await auditLog(req.user.sub, "platform.student_plan_update", "access_plans", planId, {
+      priceCents: plan.price,
+      sessionLimit: plan.sessionLimit,
+      durationDays: plan.duration,
+      applyToActive: plan.applyToActive
+    });
+    return success(res, { id: planId, updatedPasses }, "Plano atualizado para todos");
+  })
+);
+
+router.put(
+  "/plans/institution/:id",
+  onlyPlatform,
+  asyncHandler(async (req, res) => {
+    const planId = Number(req.params.id);
+    const plan = readPlanBody(req.body || {}, { withSessions: false });
+    const current = await db.query("SELECT id FROM platform_plans WHERE id = ? LIMIT 1", [planId]);
+    if (!current[0]) throw new ApiError(404, "Plano nao encontrado");
+
+    await db.query(
+      `UPDATE platform_plans
+       SET name = ?, description = ?, price_cents = ?, duration_days = ?, is_active = ?
+       WHERE id = ?`,
+      [plan.name, plan.description, plan.price, plan.duration, plan.isActive, planId]
+    );
+
+    let updatedSubscriptions = 0;
+    if (plan.applyToActive) {
+      const result = await db.query(
+        "UPDATE institution_platform_subscriptions SET monthly_fee_cents = ? WHERE plan_id = ?",
+        [plan.price, planId]
+      );
+      updatedSubscriptions = Number(result && result.affectedRows) || 0;
+    }
+
+    await auditLog(req.user.sub, "platform.institution_plan_update", "platform_plans", planId, {
+      priceCents: plan.price,
+      durationDays: plan.duration,
+      applyToActive: plan.applyToActive
+    });
+    return success(res, { id: planId, updatedSubscriptions }, "Plano atualizado para todos");
   })
 );
 

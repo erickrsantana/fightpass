@@ -74,7 +74,7 @@
           <div style="min-width:0;">
             <strong>${esc(item.name)}</strong>
             <span>${esc([item.neighborhood, item.city].filter(Boolean).join(" - "))}</span>
-            <small>${esc(peopleLabel(item.students_count))} &middot; ${esc(item.staff_count)} na equipe</small>
+            <small>${esc(peopleLabel(item.students_count))} &middot; ${esc(item.instructors_count)} instrutor(es)</small>
           </div>
         </div>
       </button>

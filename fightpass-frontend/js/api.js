@@ -129,7 +129,7 @@
       window.location.href = "plataforma.html";
       return;
     }
-    window.location.href = user.role === "student" ? "dashboard.html" : "gestao.html";
+    window.location.href = user.role === "student" ? "dashboard.html" : user.role === "instructor" ? "modalidades.html" : "gestao.html";
   }
 
   async function request(path, options = {}) {

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Usuarios</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="usuarios-plataforma">
+    <main class="main-content">
+        <header class="page-hero page-hero-home">
+            <h1>Usuarios</h1>
+            <p>Busque por nome, e-mail, CPF/CNPJ ou ID e abra a ficha completa.</p>
+        </header>
+        <div id="users-message" hidden></div>
+
+        <section class="card-white" style="margin-top: 24px;">
+            <div class="tab-row" id="users-tabs"></div>
+            <div class="input-group" style="margin: 14px 0;">
+                <input id="users-search" type="search" class="input-field" placeholder="Buscar por nome, e-mail, CPF/CNPJ ou ID (ex.: #12)">
+            </div>
+            <div class="scroll-box" id="users-list">
+                <div class="empty-state">Carregando...</div>
+            </div>
+            <p id="users-count" class="muted-note"></p>
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="ficha-overlay" hidden>
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Ficha do usuario">
+            <button type="button" class="modal-close" id="ficha-close" aria-label="Fechar">&times;</button>
+            <div id="ficha-body"></div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/usuarios-plataforma.js"></script>
+</body>
+</html>

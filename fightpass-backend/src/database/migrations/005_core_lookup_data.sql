@@ -1,8 +1,7 @@
 INSERT INTO roles (code, name) VALUES
   ('student', 'Aluno'),
   ('instructor', 'Instrutor'),
-  ('institution_admin', 'Administrador da Instituicao'),
-  ('staff', 'Equipe de Apoio')
+  ('institution_admin', 'Administrador da Instituicao')
 ON DUPLICATE KEY UPDATE
   name = VALUES(name);
 

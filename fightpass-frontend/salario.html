@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FightPass - Meu salario</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme app-shell" data-page="salario">
+    <main class="main-content">
+        <header class="page-hero page-hero-home">
+            <h1>Meu salario</h1>
+            <p>As aulas que voce deu, o valor do mes e quando o pagamento cai na sua conta. Quem paga e a academia.</p>
+        </header>
+        <div id="salary-message" hidden></div>
+
+        <div class="metrics-grid" id="salary-cards"></div>
+
+        <section class="card-white" style="margin-top: 24px;">
+            <h2>Historico</h2>
+            <div class="scroll-box" style="margin-top: 12px;">
+                <table class="table">
+                    <thead>
+                        <tr><th>Mes</th><th>Academia</th><th>Aulas dadas</th><th>Valor por aula</th><th>Total</th><th>Situacao</th></tr>
+                    </thead>
+                    <tbody id="salary-table"></tbody>
+                </table>
+            </div>
+            <p class="muted-note">Uma aula conta como dada quando voce faz a chamada dela.</p>
+        </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/salario.js"></script>
+</body>
+</html>

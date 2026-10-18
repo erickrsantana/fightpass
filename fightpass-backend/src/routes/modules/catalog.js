@@ -196,6 +196,24 @@ router.get(
   auth(["institution_admin", "instructor"]),
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.params.id);
+
+    // Instrutor so ve os alunos que agendaram aulas das turmas dele.
+    if (req.user.role === "instructor") {
+      const own = await db.query(
+        `SELECT DISTINCT u.id, u.name, u.email, u.gender, u.avatar_url, 'active' AS enrollment_status,
+                m.id AS modality_id, m.name AS modality_name
+         FROM bookings b
+         INNER JOIN class_schedules cs ON cs.id = b.class_schedule_id
+         INNER JOIN classes c ON c.id = cs.class_id
+         INNER JOIN users u ON u.id = b.student_id
+         INNER JOIN modalities m ON m.id = c.modality_id
+         WHERE c.institution_id = ? AND c.instructor_id = ? AND b.status <> 'cancelled'
+         ORDER BY u.name`,
+        [req.params.id, req.user.sub]
+      );
+      return success(res, own, "Alunos das suas turmas carregados com sucesso");
+    }
+
     const data = await db.query(
       `SELECT u.id, u.name, u.email, u.gender, u.avatar_url, e.status AS enrollment_status, m.id AS modality_id, m.name AS modality_name
        FROM enrollments e

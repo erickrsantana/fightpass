@@ -18,6 +18,7 @@
         <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
             <div class="button-row" style="justify-content: space-between; margin-bottom: 16px;">
                 <h2 style="font-size: 18px; color: #1E293B;">1. Modalidades da academia</h2>
+                <button type="button" class="btn-primary" id="create-modality-btn" style="width:auto; padding:10px 20px;">+ Criar modalidade</button>
                 <div class="input-group" style="margin-bottom: 0;">
                     <label for="attendance-date">Data</label>
                     <input id="attendance-date" type="date" class="input-field">
@@ -46,6 +47,66 @@
             </table>
         </section>
     </main>
+
+    <div class="modal-overlay" id="create-modality-overlay" hidden>
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Criar modalidade">
+            <button type="button" class="modal-close" data-close-modal aria-label="Fechar">&times;</button>
+            <h2>Criar modalidade</h2>
+            <p class="muted-note">Cada modalidade tem um professor responsavel. So ele faz a chamada dessa turma.</p>
+            <form id="create-modality-form">
+                <div class="input-group">
+                    <label for="new-modality-name">Modalidade</label>
+                    <input id="new-modality-name" name="modalityName" class="input-field" list="modality-suggestions" maxlength="100" required placeholder="Ex.: Capoeira">
+                    <datalist id="modality-suggestions"></datalist>
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-title">Nome da turma</label>
+                    <input id="new-modality-title" name="title" class="input-field" required placeholder="Ex.: Capoeira iniciante">
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-instructor">Professor responsavel</label>
+                    <select id="new-modality-instructor" name="instructorId" class="input-field"></select>
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-day">Dia</label>
+                    <select id="new-modality-day" name="dayOfWeek" class="input-field" required>
+                        <option value="1">Segunda</option>
+                        <option value="2">Terca</option>
+                        <option value="3">Quarta</option>
+                        <option value="4">Quinta</option>
+                        <option value="5">Sexta</option>
+                        <option value="6">Sabado</option>
+                        <option value="0">Domingo</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-start">Inicio</label>
+                    <input id="new-modality-start" name="startTime" type="time" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-end">Fim</label>
+                    <input id="new-modality-end" name="endTime" type="time" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-room">Local / sala</label>
+                    <input id="new-modality-room" name="roomName" class="input-field" placeholder="Ex.: Sala 2">
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-capacity">Vagas</label>
+                    <input id="new-modality-capacity" name="capacity" type="number" min="1" value="20" class="input-field" required>
+                </div>
+                <div class="input-group">
+                    <label for="new-modality-description">Descricao (opcional)</label>
+                    <input id="new-modality-description" name="description" class="input-field">
+                </div>
+                <div id="create-modality-message" class="state-message error" hidden></div>
+                <div class="button-row" style="margin-top:12px;">
+                    <button type="submit" class="btn-primary" style="width:auto; padding:12px 32px;">Criar modalidade</button>
+                    <button type="button" class="btn-cancel" data-close-modal>Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>

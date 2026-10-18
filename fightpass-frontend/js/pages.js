@@ -413,6 +413,10 @@
   async function initMapa() {
     const user = await api.requireAuth();
     if (!user) return;
+    if (user.role === "instructor") {
+      window.location.href = "modalidades.html";
+      return;
+    }
     let selectedModalities = [];
     let institutions = [];
     let userCoordinates = null;
@@ -879,6 +883,62 @@
         : `<span>${html(initials(profile.name))}</span>`;
     }
 
+    function resizeImage(file, maxSize) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Nao foi possivel ler a foto"));
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error("Arquivo de imagem invalido"));
+          img.onload = () => {
+            const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.85));
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function updatePhotoControls() {
+      const remove = $("#profile-avatar-remove");
+      const field = $("#profile-avatar-url");
+      if (remove && field) remove.hidden = !field.value;
+    }
+
+    const pickButton = $("#profile-avatar-pick");
+    const fileInput = $("#profile-avatar-file");
+    const removeButton = $("#profile-avatar-remove");
+    if (pickButton && fileInput) {
+      pickButton.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        try {
+          const dataUrl = await resizeImage(file, 320);
+          $("#profile-avatar-url").value = dataUrl;
+          renderProfilePhoto({ name: $("#profile-name").value, avatarUrl: dataUrl });
+          updatePhotoControls();
+          setMessage("#profile-message", "Foto escolhida. Clique em Salvar alteracoes para confirmar.", "info");
+        } catch (error) {
+          setMessage("#profile-message", error.message, "error");
+        }
+        fileInput.value = "";
+      });
+    }
+    if (removeButton) {
+      removeButton.addEventListener("click", () => {
+        $("#profile-avatar-url").value = "";
+        renderProfilePhoto({ name: $("#profile-name").value, avatarUrl: "" });
+        updatePhotoControls();
+        setMessage("#profile-message", "Foto removida. Clique em Salvar alteracoes para confirmar.", "info");
+      });
+    }
+
     function renderProfileAccess(accessData) {
       const panel = $("#profile-access");
       if (!panel) return;
@@ -930,6 +990,7 @@
         $("#profile-document").value = profile.document || "";
         $("#profile-role").value = api.roleLabel(profile.role);
         renderProfilePhoto(profile);
+        updatePhotoControls();
         renderProfileAccess(accessResponse.data);
         setMessage("#profile-message", "", "info");
       } catch (error) {
@@ -953,8 +1014,15 @@
             avatarUrl: data.avatarUrl || null
           }
         });
-        api.saveSession({ user: response.data });
+        api.saveSession({ user: { ...response.data, avatarUrl: response.data.avatar_url || null } });
         renderProfilePhoto(response.data);
+        updatePhotoControls();
+        const headerAvatar = document.querySelector(".header-avatar");
+        if (headerAvatar) {
+          headerAvatar.innerHTML = response.data.avatar_url
+            ? `<img src="${html(response.data.avatar_url)}" alt="">`
+            : `<span>${html(initials(response.data.name))}</span>`;
+        }
         setMessage("#profile-message", response.message, "success");
       } catch (error) {
         applyFieldErrors(event.currentTarget, error.details);
@@ -1063,6 +1131,7 @@
         <tr>
           <td>${html(item.title)}</td>
           <td>${html(item.modality_name)}</td>
+          <td>${html(item.instructor_name || "Sem instrutor")}</td>
           <td>${(item.schedules || []).map((schedule) => `${api.dayLabel(schedule.day_of_week)} ${api.timeLabel(schedule.start_time)}-${api.timeLabel(schedule.end_time)}`).join("<br>") || "-"}</td>
           <td>${item.status === "active" ? "Ativa" : "Inativa"}</td>
           <td>
@@ -1071,7 +1140,7 @@
             </button>` : "-"}
           </td>
         </tr>
-      `).join("") : `<tr><td colspan="5">Nenhuma aula cadastrada.</td></tr>`;
+      `).join("") : `<tr><td colspan="6">Nenhuma aula cadastrada.</td></tr>`;
     }
 
     function attendanceSlotKey(modality, title, startTime) {
@@ -1161,8 +1230,10 @@
           <td>${html(item.student_name)}</td>
           <td>${html(api.statusLabel(item.attendance_status || "pending"))}</td>
           <td>
-            <button class="btn-secondary" style="width:auto; padding:8px 12px;" data-attendance-booking="${item.booking_id}" data-attendance-status="present">Presente</button>
-            <button class="btn-cancel" type="button" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">Ausente</button>
+            <div class="att-buttons">
+              <button type="button" class="att-btn att-present${item.attendance_status === "present" ? " selected" : ""}" title="Presente" aria-label="Presente" data-attendance-booking="${item.booking_id}" data-attendance-status="present">&#10003;</button>
+              <button type="button" class="att-btn att-absent${item.attendance_status === "absent" ? " selected" : ""}" title="Ausente" aria-label="Ausente" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">&#10005;</button>
+            </div>
           </td>
         </tr>
       `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horario.</td></tr>`;
@@ -1202,6 +1273,30 @@
       });
     }
 
+    const instructorsTable = $("#instructors-table");
+    const instructorForm = $("#instructor-form");
+
+    async function loadInstructors() {
+      if (!isAdmin || !instructorsTable) return;
+      const response = await api.request(`/dojo/instructors?institutionId=${institutionId}`);
+      const list = response.data || [];
+      instructorsTable.innerHTML = list.length ? list.map((item) => `
+        <tr>
+          <td>${html(item.name)}</td>
+          <td>${html(item.email)}</td>
+          <td>${item.classes_count}</td>
+          <td>${item.status === "active" ? "Ativo" : "Inativo"}</td>
+          <td><button type="button" class="btn-secondary" style="width:auto; padding:8px 12px;" data-instructor-status="${item.id}" data-next-status="${item.status === "active" ? "inactive" : "active"}">${item.status === "active" ? "Desativar" : "Ativar"}</button></td>
+        </tr>
+      `).join("") : `<tr><td colspan="5">Nenhum instrutor cadastrado.</td></tr>`;
+      const select = $("#class-instructor");
+      if (select) {
+        select.innerHTML = `<option value="">Sem instrutor (so a academia faz a chamada)</option>` + list
+          .filter((item) => item.status === "active")
+          .map((item) => `<option value="${item.id}">${html(item.name)}</option>`).join("");
+      }
+    }
+
     async function loadDojoData() {
       const [subscription, institution, classes] = await Promise.all([
         api.request(`/dojo/subscription?institutionId=${institutionId}`),
@@ -1213,6 +1308,7 @@
       renderAddress(institution.data);
       renderClasses(classes.data);
       dojoClasses = classes.data || [];
+      await loadInstructors();
       renderAttendance();
       if (isAdmin && $("#class-modality")) {
         $("#class-modality").innerHTML = institution.data.modalities.map((item) => `
@@ -1277,6 +1373,7 @@
             body: {
               institutionId,
               modalityId: Number(data.modalityId),
+              instructorId: data.instructorId ? Number(data.instructorId) : null,
               title: data.title,
               description: data.description || null,
               capacity: Number(data.capacity),
@@ -1290,6 +1387,48 @@
           $("#class-capacity").value = 20;
           await loadDojoData();
           setMessage("#management-message", response.message, "success");
+        } catch (error) {
+          setMessage("#management-message", error.message, "error", error.details);
+        }
+      });
+    }
+
+    if (isAdmin && instructorForm) {
+      instructorForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setMessage("#management-message", "Criando instrutor...", "loading");
+        const data = formData(instructorForm);
+        try {
+          const response = await api.request("/dojo/instructors", {
+            method: "POST",
+            body: {
+              institutionId,
+              name: data.name,
+              email: data.email,
+              document: data.document,
+              phone: data.phone || null,
+              password: data.password
+            }
+          });
+          instructorForm.reset();
+          await loadInstructors();
+          setMessage("#management-message", `${response.message}. Passe o e-mail e a senha provisoria ao professor.`, "success");
+        } catch (error) {
+          setMessage("#management-message", error.message, "error", error.details);
+        }
+      });
+    }
+
+    if (isAdmin && instructorsTable) {
+      instructorsTable.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-instructor-status]");
+        if (!button) return;
+        try {
+          await api.request(`/dojo/instructors/${button.dataset.instructorStatus}/status`, {
+            method: "PATCH",
+            body: { institutionId, status: button.dataset.nextStatus }
+          });
+          await loadInstructors();
         } catch (error) {
           setMessage("#management-message", error.message, "error", error.details);
         }
@@ -1376,6 +1515,7 @@
             key,
             modality: item.modality_name,
             title: item.title,
+            instructor: item.instructor_name || "",
             start: schedule.start_time,
             end: schedule.end_time,
             items: []
@@ -1404,12 +1544,16 @@
 
     function render() {
       const slots = buildSlots();
-      const names = Array.from(new Set([...modalityNames, ...slots.map((slot) => slot.modality)]))
+      // Instrutor so ve as modalidades das turmas dele no dia escolhido.
+      const baseNames = user.role === "instructor" ? [] : modalityNames;
+      const names = Array.from(new Set([...baseNames, ...slots.map((slot) => slot.modality)]))
         .sort((a, b) => String(a).localeCompare(String(b)));
 
       if (selectedModality && !names.includes(selectedModality)) selectedModality = null;
+      if (!selectedModality && names.length === 1) selectedModality = names[0];
       const modalitySlots = slots.filter((slot) => slot.modality === selectedModality);
       if (!modalitySlots.some((slot) => slot.key === selectedSlotKey)) selectedSlotKey = null;
+      if (!selectedSlotKey && modalitySlots.length === 1) selectedSlotKey = modalitySlots[0].key;
 
       attendanceModalities.innerHTML = names.length ? names.map((name) => {
         const own = slots.filter((slot) => slot.modality === name);
@@ -1417,7 +1561,7 @@
         return `<button type="button" class="${name === selectedModality ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:12px 20px;" data-attendance-modality="${html(name)}">
           ${html(name)}<br><small>${own.length} horario${own.length === 1 ? "" : "s"} | ${students} aluno${students === 1 ? "" : "s"}</small>
         </button>`;
-      }).join("") : `<div class="empty-state">Nenhuma modalidade cadastrada.</div>`;
+      }).join("") : `<div class="empty-state">${user.role === "instructor" ? "Voce nao tem aula neste dia." : "Nenhuma modalidade cadastrada."}</div>`;
 
       if (!selectedModality) {
         attendanceSlots.innerHTML = `<div class="empty-state">Toque em uma modalidade para ver os horarios.</div>`;
@@ -1426,7 +1570,7 @@
       } else {
         attendanceSlots.innerHTML = modalitySlots.map((slot) => `
           <button type="button" class="${slot.key === selectedSlotKey ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:12px 20px;" data-attendance-slot="${html(slot.key)}">
-            ${api.timeLabel(slot.start)}-${api.timeLabel(slot.end)}<br><small>${html(slot.title)} | ${slot.items.length} aluno${slot.items.length === 1 ? "" : "s"}</small>
+            ${api.timeLabel(slot.start)}-${api.timeLabel(slot.end)}<br><small>${html(slot.title)}${slot.instructor ? ` | Prof. ${html(slot.instructor)}` : ""} | ${slot.items.length} aluno${slot.items.length === 1 ? "" : "s"}</small>
           </button>
         `).join("");
       }
@@ -1446,8 +1590,10 @@
           <td>${html(item.student_name)}</td>
           <td>${html(api.statusLabel(item.attendance_status || "pending"))}</td>
           <td>
-            <button class="btn-secondary" type="button" style="width:auto; padding:8px 12px;" data-attendance-booking="${item.booking_id}" data-attendance-status="present">Presente</button>
-            <button class="btn-cancel" type="button" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">Ausente</button>
+            <div class="att-buttons">
+              <button type="button" class="att-btn att-present${item.attendance_status === "present" ? " selected" : ""}" title="Presente" aria-label="Presente" data-attendance-booking="${item.booking_id}" data-attendance-status="present">&#10003;</button>
+              <button type="button" class="att-btn att-absent${item.attendance_status === "absent" ? " selected" : ""}" title="Ausente" aria-label="Ausente" data-attendance-booking="${item.booking_id}" data-attendance-status="absent">&#10005;</button>
+            </div>
           </td>
         </tr>
       `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horario.</td></tr>`;
@@ -1503,14 +1649,83 @@
       }
     });
 
-    setMessage("#management-message", "Carregando modalidades...", "loading");
-    try {
+    async function reloadModalities() {
       const [institution, classes] = await Promise.all([
         api.request(`/institutions/${institutionId}`),
         api.request(`/dojo/classes?institutionId=${institutionId}`)
       ]);
       modalityNames = (institution.data.modalities || []).map((item) => item.name);
       dojoClasses = classes.data || [];
+    }
+
+    // ----- Criar modalidade (somente a academia) -----
+    const createButton = $("#create-modality-btn");
+    const createOverlay = $("#create-modality-overlay");
+    const createForm = $("#create-modality-form");
+    if (createButton && user.role !== "institution_admin") createButton.hidden = true;
+
+    function closeCreateModality() {
+      if (createOverlay) createOverlay.hidden = true;
+      document.body.classList.remove("modal-open");
+    }
+
+    if (createButton && createOverlay && createForm && user.role === "institution_admin") {
+      createButton.addEventListener("click", async () => {
+        const list = $("#modality-suggestions");
+        if (list) list.innerHTML = modalityNames.map((name) => `<option value="${html(name)}"></option>`).join("");
+        try {
+          const response = await api.request(`/dojo/instructors?institutionId=${institutionId}`);
+          $("#new-modality-instructor").innerHTML = `<option value="">Sem instrutor (so a academia faz a chamada)</option>` +
+            (response.data || []).filter((item) => item.status === "active")
+              .map((item) => `<option value="${item.id}">${html(item.name)}</option>`).join("");
+        } catch (error) {
+          setMessage("#management-message", error.message, "error", error.details);
+        }
+        $("#create-modality-message").hidden = true;
+        createOverlay.hidden = false;
+        document.body.classList.add("modal-open");
+      });
+
+      createOverlay.addEventListener("click", (event) => {
+        if (event.target === createOverlay || event.target.closest("[data-close-modal]")) closeCreateModality();
+      });
+
+      createForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = formData(createForm);
+        const box = $("#create-modality-message");
+        try {
+          const response = await api.request("/classes", {
+            method: "POST",
+            body: {
+              institutionId,
+              modalityName: data.modalityName,
+              instructorId: data.instructorId ? Number(data.instructorId) : null,
+              title: data.title,
+              description: data.description || null,
+              capacity: Number(data.capacity),
+              dayOfWeek: Number(data.dayOfWeek),
+              startTime: data.startTime,
+              endTime: data.endTime,
+              roomName: data.roomName || null
+            }
+          });
+          createForm.reset();
+          $("#new-modality-capacity").value = 20;
+          closeCreateModality();
+          await reloadModalities();
+          await loadRoster();
+          setMessage("#management-message", response.message, "success");
+        } catch (error) {
+          box.textContent = [error.message].concat((error.details || []).map((item) => item.msg)).join(" - ");
+          box.hidden = false;
+        }
+      });
+    }
+
+    setMessage("#management-message", "Carregando modalidades...", "loading");
+    try {
+      await reloadModalities();
       await loadRoster();
       setMessage("#management-message", "", "info");
     } catch (error) {
@@ -1621,7 +1836,7 @@
   async function initPlanos() {
     const user = await api.requireAuth();
     if (!user) return;
-    if (user.role === "student" && window.FightPassPlanosAluno) {
+    if ((user.role === "student" || user.role === "institution_admin") && window.FightPassPlanosAluno) {
       return window.FightPassPlanosAluno.init(user);
     }
     const plansList = $("#plans-list");

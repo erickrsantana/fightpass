@@ -10,15 +10,24 @@ document.addEventListener("DOMContentLoaded", async function () {
   const userName = cachedUser ? cachedUser.name : "Usuário";
   const userRole = cachedUser ? api.roleLabel(cachedUser.role) : "Sessão";
   const isPlatform = Boolean(cachedUser) && cachedUser.role === "platform_admin";
-  const homeHref = isPlatform ? "plataforma.html" : "dashboard.html";
+  const isInstructor = Boolean(cachedUser) && cachedUser.role === "instructor";
+  const homeHref = isPlatform ? "plataforma.html" : isInstructor ? "modalidades.html" : "dashboard.html";
+
+  const avatarSrc = cachedUser ? (cachedUser.avatarUrl || cachedUser.avatar_url) : "";
+  const safeSrc = avatarSrc && /^(https?:\/\/|data:image\/)/.test(avatarSrc) ? avatarSrc.replace(/"/g, "&quot;") : "";
+  const initialsText = String(userName).trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "FP";
+  const headerAvatar = safeSrc ? `<img src="${safeSrc}" alt="">` : `<span>${initialsText}</span>`;
 
   const headerHTML = `
     <header class="top-header">
       <a class="header-logo" href="${homeHref}">FightPass</a>
       <div class="search-container"></div>
       <div class="user-profile-badge">
-        <span class="user-name">${userName}</span>
-        <span class="user-role">${userRole}</span>
+        <div class="header-avatar">${headerAvatar}</div>
+        <div class="user-text">
+          <span class="user-name">${userName}</span>
+          <span class="user-role">${userRole}</span>
+        </div>
       </div>
       <button class="logout-button" type="button" id="logout-button">Sair</button>
     </header>
@@ -29,10 +38,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       <a href="plataforma.html" class="nav-link" id="nav-p-home" data-roles="platform_admin">Home</a>
       <a href="mapa-plataforma.html" class="nav-link" id="nav-p-mapa" data-roles="platform_admin">Mapa</a>
       <a href="financeiro-plataforma.html" class="nav-link" id="nav-p-financeiro" data-roles="platform_admin">Financeiro</a>
+      <a href="usuarios-plataforma.html" class="nav-link" id="nav-p-usuarios" data-roles="platform_admin">Usuários</a>
       <a href="planos-plataforma.html" class="nav-link" id="nav-p-planos" data-roles="platform_admin">Planos</a>
 
       <a href="dashboard.html" class="nav-link" id="nav-home" data-roles="student,institution_admin">Home</a>
-      <a href="mapa.html" class="nav-link" id="nav-mapa" data-roles="student,instructor,institution_admin">Mapa</a>
+      <a href="mapa.html" class="nav-link" id="nav-mapa" data-roles="student,institution_admin">Mapa</a>
       <a href="agendar.html" class="nav-link" id="nav-agendar" data-roles="student">Agendar</a>
       <a href="minhas-aulas.html" class="nav-link" id="nav-aulas" data-roles="student">Minhas aulas</a>
       <a href="checkin.html" class="nav-link" id="nav-checkin" data-roles="student">Check-in</a>
@@ -41,7 +51,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       <a href="avaliar-aluno.html" class="nav-link" id="nav-avaliar" data-roles="institution_admin">Avaliar aluno</a>
       <a href="financeiro.html" class="nav-link" id="nav-financeiro" data-roles="institution_admin">Financeiro</a>
       <a href="planos.html" class="nav-link" id="nav-planos" data-roles="student,institution_admin">Planos</a>
+      <a href="meus-pagamentos.html" class="nav-link" id="nav-pagamentos" data-roles="student,institution_admin">Pagamentos</a>
+      <a href="salario.html" class="nav-link" id="nav-salario" data-roles="instructor">Meu salário</a>
 
+      <a href="suporte.html?tab=reclame" class="nav-link" id="nav-reclame" data-roles="student,instructor,institution_admin,platform_admin">Reclame aqui</a>
+      <a href="suporte.html?tab=ajuda" class="nav-link" id="nav-ajuda" data-roles="student,instructor,institution_admin,platform_admin">Ajuda</a>
       <a href="perfil.html" class="nav-link" id="nav-perfil" data-roles="student,instructor,institution_admin,platform_admin">Perfil</a>
     </nav>
   `;
@@ -58,6 +72,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     plataforma: "nav-p-home",
     "mapa-plataforma": "nav-p-mapa",
     "planos-plataforma": "nav-p-planos",
+    "usuarios-plataforma": "nav-p-usuarios",
+    "meus-pagamentos": "nav-pagamentos",
+    comprovante: "nav-pagamentos",
+    salario: "nav-salario",
     "financeiro-plataforma": "nav-p-financeiro",
     dashboard: "nav-home",
     mapa: "nav-mapa",
@@ -73,12 +91,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     perfil: "nav-perfil"
   };
 
- Object.keys(navMap).forEach((key) => {
-    if (path.includes(key)) {
-      const el = document.getElementById(navMap[key]);
-      if (el) el.classList.add("active");
-    }
-  });
+  const currentPage = path.split("/").pop().replace(/\.html$/, "");
+  if (currentPage === "suporte") {
+    const supportTab = new URLSearchParams(window.location.search).get("tab") === "ajuda" ? "nav-ajuda" : "nav-reclame";
+    const supportLink = document.getElementById(supportTab);
+    if (supportLink) supportLink.classList.add("active");
+  } else if (navMap[currentPage]) {
+    const el = document.getElementById(navMap[currentPage]);
+    if (el) el.classList.add("active");
+  }
 
   const logoutButton = document.getElementById("logout-button");
   logoutButton.addEventListener("click", async () => {

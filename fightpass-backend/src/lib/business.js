@@ -103,7 +103,74 @@ async function ensureInstitutionModality(institutionId, modalityId) {
   }
 }
 
+async function ensureInstitutionInstructor(institutionId, instructorId) {
+  const rows = await db.query(
+    `SELECT iu.user_id
+     FROM institution_user iu
+     INNER JOIN users u ON u.id = iu.user_id
+     WHERE iu.institution_id = ? AND iu.user_id = ?
+       AND iu.membership_role = 'instructor' AND iu.status = 'active' AND u.is_active = 1
+     LIMIT 1`,
+    [institutionId, instructorId]
+  );
+  if (!rows[0]) {
+    throw new ApiError(400, "Instrutor invalido para esta instituicao");
+  }
+}
+
+function slugify(text) {
+  return String(text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "modalidade";
+}
+
+// Usa uma modalidade existente (por id) ou cria uma nova pelo nome e vincula a academia.
+async function resolveInstitutionModality(institutionId, modalityId, modalityName) {
+  if (modalityId) {
+    await ensureInstitutionModality(institutionId, modalityId);
+    return Number(modalityId);
+  }
+
+  const name = String(modalityName || "").trim();
+  if (name.length < 2) {
+    throw new ApiError(422, "Informe a modalidade");
+  }
+
+  let rows = await db.query("SELECT id FROM modalities WHERE LOWER(name) = LOWER(?) LIMIT 1", [name]);
+  let id = rows[0] ? rows[0].id : null;
+
+  if (!id) {
+    const baseSlug = slugify(name);
+    let slug = baseSlug;
+    let attempt = 1;
+    while ((await db.query("SELECT id FROM modalities WHERE slug = ? LIMIT 1", [slug]))[0]) {
+      attempt += 1;
+      slug = `${baseSlug}-${attempt}`;
+    }
+    const insert = await db.query(
+      "INSERT INTO modalities (name, slug, description) VALUES (?, ?, NULL)",
+      [name.slice(0, 100), slug]
+    );
+    id = insert.insertId;
+  }
+
+  const linked = await db.query(
+    "SELECT id FROM institution_modality WHERE institution_id = ? AND modality_id = ? LIMIT 1",
+    [institutionId, id]
+  );
+  if (!linked[0]) {
+    await db.query("INSERT INTO institution_modality (institution_id, modality_id) VALUES (?, ?)", [institutionId, id]);
+  }
+  return Number(id);
+}
+
 module.exports = {
+  ensureInstitutionInstructor,
+  resolveInstitutionModality,
   auditLog,
   getUserInstitutions,
   ensureInstitutionAccess,

@@ -50,11 +50,27 @@
                 <tbody id="finance-table"></tbody>
             </table>
         </section>
+
+        <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 18px; margin-bottom: 8px; color: #1E293B;">Pagamento de instrutores</h2>
+            <p class="muted-note" style="margin-bottom: 14px;">Voce define quanto paga por aula dada. No fim do mes, e so pagar: o valor cai na conta do professor e ele recebe o comprovante.</p>
+            <div id="payout-message" hidden></div>
+            <div class="scroll-box">
+                <table class="table">
+                    <thead>
+                        <tr><th>Instrutor</th><th>Aulas dadas</th><th>Valor por aula</th><th>Total do mes</th><th>Situacao</th></tr>
+                    </thead>
+                    <tbody id="payout-table"></tbody>
+                </table>
+            </div>
+            <p id="payout-totals" class="muted-note"></p>
+        </section>
     </main>
 
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
     <script src="js/financeiro.js"></script>
+    <script src="js/pagamento-instrutores.js"></script>
 </body>
 </html>

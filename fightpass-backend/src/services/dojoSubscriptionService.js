@@ -2,6 +2,7 @@ const db = require("../database/connection");
 const { ApiError } = require("../lib/http");
 const { auditLog } = require("../lib/business");
 const { ensureTermsAccepted } = require("./termsService");
+const { validateCard, makeReceiptCode, PIX_TTL_MINUTES, BOLETO_TTL_DAYS, MAX_INSTALLMENTS } = require("../lib/cardPayments");
 
 function addDays(date, days) {
   const next = new Date(date);
@@ -76,8 +77,16 @@ async function ensureSubscriptionExists(institutionId, connection = null) {
   return getInstitutionSubscription(institutionId);
 }
 
-async function createDojoPaymentSimulation({ institutionId, method, userId, termsAccepted, termsVersion, ipAddress, userAgent }) {
+async function createDojoPaymentSimulation({ institutionId, method, userId, termsAccepted, termsVersion, ipAddress, userAgent, card, installments }) {
   const plan = await getDojoPlan();
+  const isCard = method === "credit_card" || method === "debit_card";
+  const cardInfo = isCard ? validateCard(card) : null;
+  const parcels = method === "credit_card" ? Math.min(Math.max(Number(installments) || 1, 1), MAX_INSTALLMENTS) : 1;
+  const expiresAt = method === "pix"
+    ? new Date(Date.now() + PIX_TTL_MINUTES * 60 * 1000)
+    : method === "boleto"
+      ? new Date(Date.now() + BOLETO_TTL_DAYS * 24 * 60 * 60 * 1000)
+      : null;
   const connection = await db.pool.getConnection();
 
   try {
@@ -93,9 +102,12 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
 
     const [insert] = await connection.execute(
       `INSERT INTO dojo_payment_simulations
-         (institution_id, plan_id, method, amount_cents, terms_acceptance_id, contract_accepted, contract_accepted_at, contract_text_version, status)
-       VALUES (?, ?, ?, ?, ?, 1, NOW(), ?, 'pending')`,
-      [institutionId, plan.id, method, plan.price_cents, termsAcceptance.id, termsVersion]
+         (institution_id, plan_id, method, amount_cents, installments, card_brand, card_last4, expires_at,
+          terms_acceptance_id, contract_accepted, contract_accepted_at, contract_text_version, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), ?, 'pending')`,
+      [institutionId, plan.id, method, plan.price_cents, parcels,
+        cardInfo ? cardInfo.brand : null, cardInfo ? cardInfo.last4 : null, expiresAt,
+        termsAcceptance.id, termsVersion]
     );
 
     const code = method === "pix"
@@ -131,6 +143,10 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
       status: "pending",
       contractAccepted: true,
       contractTextVersion: termsVersion,
+      installments: parcels,
+      cardBrand: cardInfo ? cardInfo.brand : null,
+      cardLast4: cardInfo ? cardInfo.last4 : null,
+      expiresAt,
       pixCode: method === "pix" ? code : null,
       boletoCode: method === "boleto" ? code : null,
       referenceCode: method !== "pix" && method !== "boleto" ? code : null,
@@ -146,7 +162,7 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
 
 async function confirmDojoPayment(paymentId, userId) {
   const rows = await db.query(
-    `SELECT dp.id, dp.institution_id, dp.plan_id, dp.status, pp.duration_days, pp.price_cents,
+    `SELECT dp.id, dp.institution_id, dp.plan_id, dp.status, dp.expires_at, pp.duration_days, pp.price_cents,
             dp.contract_accepted, dp.terms_acceptance_id
      FROM dojo_payment_simulations dp
      INNER JOIN platform_plans pp ON pp.id = dp.plan_id
@@ -164,6 +180,14 @@ async function confirmDojoPayment(paymentId, userId) {
     throw new ApiError(409, "Pagamento DOJO ja confirmado");
   }
 
+  if (payment.status === "cancelled") {
+    throw new ApiError(409, "Cobranca cancelada");
+  }
+
+  if (payment.expires_at && new Date(payment.expires_at) < new Date()) {
+    throw new ApiError(410, "Cobranca expirada. Gere uma nova.");
+  }
+
   if (!payment.contract_accepted || !payment.terms_acceptance_id) {
     throw new ApiError(422, "Termos de Uso do Plano DOJO nao foram aceitos");
   }
@@ -175,8 +199,8 @@ async function confirmDojoPayment(paymentId, userId) {
   try {
     await connection.beginTransaction();
     await connection.execute(
-      "UPDATE dojo_payment_simulations SET status = 'paid', paid_at = NOW() WHERE id = ?",
-      [payment.id]
+      "UPDATE dojo_payment_simulations SET status = 'paid', paid_at = NOW(), receipt_code = ? WHERE id = ?",
+      [makeReceiptCode(payment.id).replace("FP-", "FP-DOJO-"), payment.id]
     );
     await connection.execute(
       `INSERT INTO institution_platform_subscriptions

@@ -12,6 +12,8 @@ const dojoRoutes = require("./modules/dojo");
 const termsRoutes = require("./modules/terms");
 const financeRoutes = require("./modules/finance");
 const platformRoutes = require("./modules/platform"); // novo
+const supportRoutes = require("./modules/support");
+const payoutRoutes = require("./modules/payouts");
 
 const router = express.Router();
 
@@ -32,5 +34,7 @@ router.use("/dojo", dojoRoutes);
 router.use("/terms", termsRoutes);
 router.use("/finance", financeRoutes);
 router.use("/platform", platformRoutes); // novo
+router.use("/support", supportRoutes);
+router.use("/payouts", payoutRoutes);
 
 module.exports = router;

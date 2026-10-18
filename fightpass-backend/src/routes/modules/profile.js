@@ -54,8 +54,14 @@ router.put(
       .withMessage("Genero invalido"),
     body("avatarUrl")
       .optional({ checkFalsy: true })
-      .isURL({ protocols: ["http", "https"], require_protocol: true })
-      .withMessage("URL da foto invalida")
+      .custom((value) => {
+        const text = String(value);
+        const isImageData = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(text);
+        const isLink = /^https?:\/\/\S+$/.test(text);
+        if (isImageData) return text.length <= 600000;
+        return isLink && text.length <= 500;
+      })
+      .withMessage("Foto invalida ou muito grande")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
