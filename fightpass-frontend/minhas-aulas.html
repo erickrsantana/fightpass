@@ -16,20 +16,30 @@
         <div id="my-classes-message" hidden></div>
         <section id="class-reminders" class="card-white" style="margin-bottom: 20px;" hidden></section>
 
+        <section class="card-white" style="margin-bottom: 20px;">
+            <div class="chip-row" id="period-chips" style="margin-top:0;">
+                <button type="button" class="chip active" data-period="upcoming">Proximas</button>
+                <button type="button" class="chip" data-period="past">Passadas</button>
+                <button type="button" class="chip" data-period="all">Todas</button>
+            </div>
+            <div class="filter-grid">
+                <div class="input-group"><label for="filter-modality">Modalidade</label>
+                    <select id="filter-modality" class="input-field"><option value="">Todas</option></select></div>
+                <div class="input-group"><label for="filter-institution">Academia</label>
+                    <select id="filter-institution" class="input-field"><option value="">Todas</option></select></div>
+                <div class="input-group"><label for="filter-from">De</label>
+                    <input id="filter-from" type="date" class="input-field"></div>
+                <div class="input-group"><label for="filter-to">Ate</label>
+                    <input id="filter-to" type="date" class="input-field"></div>
+            </div>
+            <div class="button-row" style="justify-content: space-between; align-items:center; margin-top: 8px;">
+                <small id="filter-count" class="muted-note"></small>
+                <button type="button" id="filter-clear" class="btn-secondary" style="width:auto; padding: 8px 16px;">Limpar filtros</button>
+            </div>
+        </section>
+
         <div class="card-white">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Dia</th>
-                        <th>Hora</th>
-                        <th>Modalidade</th>
-                        <th>Status</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody id="bookings-table"></tbody>
-            </table>
+            <div id="bookings-tree"></div>
         </div>
     </main>
 

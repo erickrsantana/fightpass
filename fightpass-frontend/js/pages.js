@@ -769,12 +769,111 @@
   async function initMinhasAulas() {
     const user = await api.requireAuth(["student"]);
     if (!user) return;
-    const tbody = $("#bookings-table");
+    const tbody = $("#bookings-tree");
+    let allBookings = [];
+    let period = "upcoming";
+
+    const dateOnly = (value) => String(value || "").slice(0, 10);
+    const todayText = () => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    };
+
+    function fillSelect(selector, values, labelFn) {
+      const select = $(selector);
+      if (!select) return;
+      const current = select.value;
+      const first = select.options[0];
+      select.innerHTML = "";
+      select.appendChild(first);
+      Array.from(new Set(values)).sort((a, b) => String(a).localeCompare(String(b))).forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = labelFn ? labelFn(value) : value;
+        select.appendChild(option);
+      });
+      select.value = Array.from(select.options).some((option) => option.value === current) ? current : "";
+    }
+
+    function renderBookings() {
+      const modality = $("#filter-modality").value;
+      const institution = $("#filter-institution").value;
+      const from = $("#filter-from").value;
+      const to = $("#filter-to").value;
+      const today = todayText();
+
+      const filtered = allBookings.filter((item) => {
+        const day = dateOnly(item.booking_date);
+        if (period === "upcoming" && day < today) return false;
+        if (period === "past" && day >= today) return false;
+        if (modality && item.modality_name !== modality) return false;
+        if (institution && item.institution_name !== institution) return false;
+        if (from && day < from) return false;
+        if (to && day > to) return false;
+        return true;
+      });
+      if (period === "past") filtered.reverse();
+
+      // Cascata: Academia > Modalidade > aulas (data, dia, horario).
+      const tree = new Map();
+      filtered.forEach((item) => {
+        if (!tree.has(item.institution_name)) tree.set(item.institution_name, new Map());
+        const modalities = tree.get(item.institution_name);
+        if (!modalities.has(item.modality_name)) modalities.set(item.modality_name, []);
+        modalities.get(item.modality_name).push(item);
+      });
+      const plural = (n) => `${n} aula${n === 1 ? "" : "s"}`;
+      tbody.innerHTML = filtered.length ? Array.from(tree.entries()).map(([institution, modalities]) => {
+        const institutionTotal = Array.from(modalities.values()).reduce((sum, list) => sum + list.length, 0);
+        return `
+          <details class="tree-node" open>
+            <summary class="tree-institution"><span>🏢 ${html(institution)}</span><span class="tree-count">${plural(institutionTotal)}</span></summary>
+            <div class="tree-children">
+              ${Array.from(modalities.entries()).map(([modality, list]) => `
+                <details class="tree-node" open>
+                  <summary class="tree-modality"><span>🥋 ${html(modality)}</span><span class="tree-count">${plural(list.length)}</span></summary>
+                  <div class="tree-children">
+                    ${list.map((item) => `
+                      <div class="tree-lesson">
+                        <span class="tree-date">${api.formatDate(item.booking_date)}</span>
+                        <span>${html(api.dayLabel(item.day_of_week))} &middot; ${api.timeLabel(item.start_time)}-${api.timeLabel(item.end_time)}</span>
+                        <span class="muted-note">${html(item.class_title || "")}</span>
+                        <span class="tag tag-neutral">${html(api.statusLabel(item.status))}</span>
+                        <button class="btn-cancel" data-cancel="${item.id}" ${dateOnly(item.booking_date) < today ? "disabled" : ""}>Cancelar</button>
+                      </div>`).join("")}
+                  </div>
+                </details>`).join("")}
+            </div>
+          </details>`;
+      }).join("") : `<div class="empty-state">Nenhuma aula encontrada com esses filtros.</div>`;
+      $("#filter-count").textContent = `${filtered.length} de ${allBookings.length} aula${allBookings.length === 1 ? "" : "s"}`;
+    }
+
+    $("#period-chips").addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-period]");
+      if (!chip) return;
+      period = chip.dataset.period;
+      document.querySelectorAll("#period-chips .chip").forEach((item) => item.classList.toggle("active", item === chip));
+      renderBookings();
+    });
+    ["#filter-modality", "#filter-institution", "#filter-from", "#filter-to"].forEach((selector) => {
+      $(selector).addEventListener("change", renderBookings);
+    });
+    $("#filter-clear").addEventListener("click", () => {
+      ["#filter-modality", "#filter-institution", "#filter-from", "#filter-to"].forEach((selector) => { $(selector).value = ""; });
+      period = "upcoming";
+      document.querySelectorAll("#period-chips .chip").forEach((item) => item.classList.toggle("active", item.dataset.period === "upcoming"));
+      renderBookings();
+    });
 
     async function loadBookings() {
       setMessage("#my-classes-message", "Carregando aulas...", "loading");
       try {
         const response = await api.request("/bookings");
+        // Aulas canceladas nao aparecem mais.
+        allBookings = response.data.filter((item) => item.status !== "cancelled");
+        fillSelect("#filter-modality", allBookings.map((item) => item.modality_name));
+        fillSelect("#filter-institution", allBookings.map((item) => item.institution_name));
         const reminders = $("#class-reminders");
         if (reminders) {
           const tomorrowClasses = response.data.filter((item) => item.status !== "cancelled" && isTomorrow(item.booking_date));
@@ -783,18 +882,7 @@
             ? tomorrowClasses.map((item) => `<div class="notice-card">Lembrete: amanha voce tem ${html(item.modality_name)} em ${html(item.institution_name)} as ${api.timeLabel(item.start_time)}.</div>`).join("")
             : `<div class="empty-state">Nenhuma aula marcada para amanha.</div>`;
         }
-        tbody.innerHTML = response.data.length ? response.data.map((item) => `
-          <tr>
-            <td>${api.formatDate(item.booking_date)}</td>
-            <td>${api.dayLabel(item.day_of_week)}</td>
-            <td>${api.timeLabel(item.start_time)}</td>
-            <td><span class="badge-modalidade">${html(item.modality_name)}</span></td>
-            <td>${html(api.statusLabel(item.status))}</td>
-            <td>
-              <button class="btn-cancel" data-cancel="${item.id}" ${item.status === "cancelled" ? "disabled" : ""}>Cancelar</button>
-            </td>
-          </tr>
-        `).join("") : `<tr><td colspan="6">Nenhuma aula encontrada.</td></tr>`;
+        renderBookings();
         setMessage("#my-classes-message", "", "info");
       } catch (error) {
         setMessage("#my-classes-message", error.message, "error", error.details);
