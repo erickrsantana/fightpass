@@ -16,6 +16,16 @@ const {
   buildBoletoCode
 } = require("../../lib/access");
 const { ensureTermsAccepted } = require("../../services/termsService");
+const { activateStudentPayment } = require("../../services/paymentActivationService");
+const env = require("../../config/env");
+const mercadoPago = require("../../lib/mercadopago");
+
+// No modo gateway (dinheiro de verdade) o fluxo ficticio fica desligado: sem isso o aluno clicaria em "confirmar" sem pagar.
+function assertSimulationAllowed() {
+  if (env.payments.mode === "gateway") {
+    throw new ApiError(403, "Pagamento simulado desativado. Use o pagamento online.");
+  }
+}
 
 const crypto = require("crypto");
 
@@ -243,6 +253,7 @@ router.post(
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
+    assertSimulationAllowed();
     const plan = await findPlan(req.body.planId);
     if (!plan || plan.code === "trial_1_day") {
       throw new ApiError(404, "Plano nao encontrado");
@@ -340,90 +351,108 @@ router.post(
   })
 );
 
+// Checkout real pelo Mercado Pago: cria a cobranca pendente e devolve o link de pagamento.
+// O plano so e liberado depois que o webhook confirmar o pagamento com o Mercado Pago.
 router.post(
-  "/payments/:id/confirm",
+  "/payments/checkout",
   auth(["student"]),
+  [
+    body("planId").isInt({ min: 1 }).withMessage("Plano invalido"),
+    body("acceptPenalty").optional().isBoolean().withMessage("Confirmacao de multa invalida")
+  ],
+  validateRequest,
   asyncHandler(async (req, res) => {
-    const connection = await db.pool.getConnection();
+    if (env.payments.mode !== "gateway") {
+      throw new ApiError(409, "Pagamento online nao esta ativado neste ambiente");
+    }
+    if (!mercadoPago.isConfigured()) {
+      throw new ApiError(503, "Pagamento online indisponivel no momento");
+    }
 
+    // O valor SEMPRE vem do banco, nunca do navegador.
+    const plan = await findPlan(req.body.planId);
+    if (!plan || plan.code === "trial_1_day" || Number(plan.price_cents) <= 0) {
+      throw new ApiError(404, "Plano nao encontrado");
+    }
+
+    const currentPlan = await findPaidPlanInUse(req.user.sub);
+    const penaltyCents = changeFeeCents(currentPlan, plan.id);
+    if (penaltyCents > 0 && req.body.acceptPenalty !== true && req.body.acceptPenalty !== "true") {
+      throw new ApiError(
+        409,
+        `Trocar de plano gera multa de ${formatMoney(penaltyCents)} (${CHANGE_FEE_PERCENT}% do plano atual ${currentPlan.plan_name}). Confirme para continuar.`
+      );
+    }
+    const totalCents = plan.price_cents + penaltyCents;
+
+    const connection = await db.pool.getConnection();
+    let paymentId;
     try {
       await connection.beginTransaction();
-      const [paymentRows] = await connection.execute(
-        `SELECT ps.id, ps.student_id, ps.plan_id, ps.status, ps.terms_acceptance_id, ps.penalty_cents, ps.expires_at,
-                ap.code, ap.name, ap.price_cents, ap.session_limit, ap.duration_days
-         FROM payment_simulations ps
-         INNER JOIN access_plans ap ON ap.id = ps.plan_id
-         WHERE ps.id = ? AND ps.student_id = ?
-         LIMIT 1`,
-        [req.params.id, req.user.sub]
-      );
-
-      const payment = paymentRows[0];
-      if (!payment) {
-        throw new ApiError(404, "Cobranca nao encontrada");
-      }
-
-      if (payment.status === "paid") {
-        throw new ApiError(409, "Cobranca ja confirmada");
-      }
-
-      if (payment.status !== "pending") {
-        throw new ApiError(409, "Cobranca nao esta pendente");
-      }
-
-      if (payment.expires_at && new Date(payment.expires_at) < new Date()) {
-        await connection.execute("UPDATE payment_simulations SET status = 'cancelled' WHERE id = ?", [payment.id]);
-        await connection.commit();
-        throw new ApiError(410, "Cobranca expirada. Gere uma nova para continuar.");
-      }
-
-      if (!payment.terms_acceptance_id) {
-        throw new ApiError(422, "Termos de Uso nao foram aceitos para esta contratacao");
-      }
-
-      const [passResult] = await connection.execute(
-        `INSERT INTO student_access_passes
-           (student_id, plan_id, source, status, starts_at, expires_at, sessions_total, sessions_used)
-         VALUES (?, ?, 'payment', 'active', NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), ?, 0)`,
-        [req.user.sub, payment.plan_id, payment.duration_days, payment.session_limit]
-      );
-
-      // Troca com multa: o plano pago anterior deixa de valer.
-      if (Number(payment.penalty_cents) > 0) {
-        await connection.execute(
-          `UPDATE student_access_passes
-           SET status = 'cancelled'
-           WHERE student_id = ? AND source = 'payment' AND status = 'active' AND id <> ?`,
-          [req.user.sub, passResult.insertId]
-        );
-      }
-
-      await connection.execute(
-        `UPDATE payment_simulations
-         SET status = 'paid', paid_at = NOW(), access_pass_id = ?, receipt_code = ?
-         WHERE id = ?`,
-        [passResult.insertId, makeReceiptCode(payment.id), payment.id]
-      );
-
-      await auditLog(req.user.sub, "payments.confirm", "payment_simulations", payment.id, {
-        accessPassId: passResult.insertId,
-        penaltyCents: Number(payment.penalty_cents) || 0,
-        prototype: true
+      const termsAcceptance = await ensureTermsAccepted({
+        userId: req.user.sub,
+        accepted: req.body.termsAccepted,
+        version: req.body.termsVersion,
+        origin: "contratacao_plano",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"]
       }, connection);
 
+      const [insertPayment] = await connection.execute(
+        `INSERT INTO payment_simulations
+           (student_id, plan_id, method, amount_cents, penalty_cents, installments, terms_acceptance_id, status, gateway_provider)
+         VALUES (?, ?, 'gateway', ?, ?, 1, ?, 'pending', 'mercadopago')`,
+        [req.user.sub, plan.id, totalCents, penaltyCents, termsAcceptance.id]
+      );
+      paymentId = insertPayment.insertId;
+      await auditLog(req.user.sub, "payments.checkout_created", "payment_simulations", paymentId, {
+        planId: plan.id, penaltyCents, provider: "mercadopago"
+      }, connection);
       await connection.commit();
-
-      return success(res, {
-        paymentId: payment.id,
-        accessPassId: passResult.insertId,
-        prototypeNotice: "Pagamento confirmado de forma ficticia para demonstracao."
-      }, "Pagamento confirmado e plano ativado");
     } catch (error) {
       await connection.rollback();
       throw error;
     } finally {
       connection.release();
     }
+
+    try {
+      const preference = await mercadoPago.createPreference({
+        title: `FightPass - ${plan.name}`,
+        amountCents: totalCents,
+        externalReference: `S-${paymentId}`,
+        payerEmail: req.user.email,
+        backPath: "meus-pagamentos.html"
+      });
+      await db.query(
+        "UPDATE payment_simulations SET gateway_preference_id = ?, gateway_checkout_url = ? WHERE id = ?",
+        [preference.preferenceId, preference.checkoutUrl, paymentId]
+      );
+      return created(res, {
+        id: paymentId,
+        amountCents: totalCents,
+        penaltyCents,
+        checkoutUrl: preference.checkoutUrl,
+        status: "pending"
+      }, "Cobranca criada. Redirecione o aluno para concluir o pagamento.");
+    } catch (error) {
+      await db.query("UPDATE payment_simulations SET status = 'cancelled' WHERE id = ?", [paymentId]);
+      throw error;
+    }
+  })
+);
+
+router.post(
+  "/payments/:id/confirm",
+  auth(["student"]),
+  asyncHandler(async (req, res) => {
+    assertSimulationAllowed();
+    const result = await activateStudentPayment({ paymentId: req.params.id, studentId: req.user.sub });
+    return success(res, {
+      paymentId: result.paymentId,
+      accessPassId: result.accessPassId,
+      prototypeNotice: "Pagamento confirmado de forma ficticia para demonstracao."
+    }, "Pagamento confirmado e plano ativado");
   })
 );
 

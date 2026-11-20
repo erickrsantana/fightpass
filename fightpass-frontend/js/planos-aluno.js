@@ -65,6 +65,8 @@
     let method = "pix";
     let payment = null;       // cobranca gerada (pix/boleto)
     let timer = null;
+    let gatewayMode = false;
+    try { gatewayMode = (await api.paymentsConfig()).data.mode === "gateway"; } catch (error) { /* simulacao */ }
 
     try {
       const terms = await api.request("/terms/current");
@@ -221,11 +223,11 @@
         <div class="checkout-grid">
           <div>
             <h2>Finalizar contratacao</h2>
-            ${payment ? "" : `<div class="method-tabs">${METHODS.map(([value, label]) =>
+            ${payment || gatewayMode ? "" : `<div class="method-tabs">${METHODS.map(([value, label]) =>
               `<button type="button" class="method-tab${method === value ? " active" : ""}" data-method="${value}">${label}</button>`).join("")}</div>`}
-            <div id="method-panel">${methodPanel()}</div>
+            <div id="method-panel">${gatewayMode ? `<p>Voce sera levado ao ambiente seguro do <strong>Mercado Pago</strong> para pagar com Pix, boleto ou cartao. Seus dados de cartao nao passam pelo FightPass.</p>` : methodPanel()}</div>
             ${payment ? `<button type="button" class="btn-cancel" data-cancel-payment="${payment.id}" style="margin-top:12px;">Cancelar cobranca</button>` : `
-              <button type="button" class="btn-primary" id="pay-button" style="margin-top:18px;">${method === "pix" || method === "boleto" ? "Gerar cobranca" : `Pagar ${money(totalCents())}`}</button>`}
+              <button type="button" class="btn-primary" id="pay-button" style="margin-top:18px;">${gatewayMode ? `Pagar ${money(totalCents())} com Mercado Pago` : method === "pix" || method === "boleto" ? "Gerar cobranca" : `Pagar ${money(totalCents())}`}</button>`}
           </div>
           <aside class="order-summary">
             <h3>Resumo</h3>
@@ -296,7 +298,28 @@
       };
     }
 
+    async function createGatewayCheckout() {
+      const button = $("#pay-button");
+      if (button) button.disabled = true;
+      say("Abrindo pagamento seguro...", "loading");
+      try {
+        const body = isAcademy
+          ? { institutionId, termsAccepted: true, termsVersion }
+          : { planId: selected.plan.id, acceptPenalty: selected.penalty > 0, termsAccepted: true, termsVersion };
+        const response = await api.request(`${prefix}/checkout`, { method: "POST", body });
+        const url = response.data.checkoutUrl;
+        if (!/^https:\/\/([a-z0-9-]+\.)*mercadopago\.com(\.[a-z]{2})?\//i.test(url) && !/^https:\/\/([a-z0-9-]+\.)*mercadolibre\.com/i.test(url)) {
+          throw new Error("Endereco de pagamento invalido.");
+        }
+        window.location.href = url;
+      } catch (error) {
+        say(error.message, "error", error.details);
+        if (button) button.disabled = false;
+      }
+    }
+
     async function createPayment() {
+      if (gatewayMode) return createGatewayCheckout();
       const button = $("#pay-button");
       if (button) button.disabled = true;
       say("Processando...", "loading");

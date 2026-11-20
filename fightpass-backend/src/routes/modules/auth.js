@@ -10,8 +10,18 @@ const {
   signToken,
   auth,
   hashPassword,
-  comparePassword
+  comparePassword,
+  passwordNeedsRehash
 } = require("../../lib/http");
+const env = require("../../config/env");
+const { createLoginThrottle } = require("../../lib/security");
+const { captchaGuard } = require("../../lib/captcha");
+const {
+  issueVerificationCode,
+  sendCode,
+  verifyEmailCode,
+  resendVerificationCode
+} = require("../../services/emailVerificationService");
 const { auditLog, getUserInstitutions } = require("../../lib/business");
 const { createTrialAccess, isValidCpf, onlyDigits } = require("../../lib/access");
 const { requestPasswordReset, resetPassword } = require("../../services/passwordResetService");
@@ -22,9 +32,20 @@ const INSTITUTION_MODALITY_SLUGS = ["boxe", "jiu-jitsu", "judo", "muay-thai", "m
 
 const router = express.Router();
 
+const loginThrottle = createLoginThrottle({
+  maxAttempts: env.security.loginMaxAttempts,
+  lockMinutes: env.security.loginLockMinutes
+});
+// Hash de mentira usado quando o e-mail nao existe: o tempo de resposta fica igual ao de um e-mail real.
+let dummyHashPromise = null;
+function getDummyHash() {
+  if (!dummyHashPromise) dummyHashPromise = hashPassword("fightpass-dummy-password");
+  return dummyHashPromise;
+}
+
 async function findUserByEmail(email) {
   const rows = await db.query(
-    `SELECT u.id, u.name, u.email, u.password_hash, u.document, u.phone, u.gender, u.avatar_url, u.is_active, r.code AS role, r.id AS role_id
+    `SELECT u.id, u.name, u.email, u.password_hash, u.document, u.phone, u.gender, u.avatar_url, u.is_active, u.email_verified_at, r.code AS role, r.id AS role_id
      FROM users u
      INNER JOIN roles r ON r.id = u.role_id
      WHERE u.email = ? LIMIT 1`,
@@ -85,8 +106,14 @@ async function serializeUser(user) {
   };
 }
 
+// Publico: o navegador descobre se ha captcha e qual a chave publica (a secreta nunca sai do servidor).
+router.get("/captcha-config", (req, res) =>
+  success(res, { enabled: env.captcha.enabled, provider: "hcaptcha", siteKey: env.captcha.enabled ? env.captcha.siteKey : null }, "Configuracao do captcha")
+);
+
 router.post(
   "/register",
+  captchaGuard,
   [
     body("name").trim().notEmpty().withMessage("Nome obrigatorio"),
     body("email").isEmail().withMessage("Email invalido").normalizeEmail(),
@@ -180,8 +207,8 @@ router.post(
       await connection.beginTransaction();
       const passwordHash = await hashPassword(req.body.password);
       const [insertUser] = await connection.execute(
-        `INSERT INTO users (role_id, name, email, password_hash, document, phone, gender, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        `INSERT INTO users (role_id, name, email, password_hash, document, phone, gender, is_active, email_verified_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ${env.emailVerification.required ? "NULL" : "NOW()"})`,
         [role.id, req.body.name, req.body.email, passwordHash, req.body.document, req.body.phone || null, req.body.gender || null]
       );
 
@@ -273,6 +300,22 @@ router.post(
       await connection.commit();
 
       const user = await findUserById(insertUser.insertId);
+
+      // Conta so libera o acesso depois que o e-mail for confirmado (codigo enviado ao e-mail cadastrado).
+      if (env.emailVerification.required) {
+        const code = await issueVerificationCode(user, { ip: req.ip });
+        const emailResult = await sendCode(user, code);
+        return created(res, {
+          requiresEmailVerification: true,
+          email: user.email,
+          emailSent: !emailResult.skipped,
+          token: null,
+          institutionId,
+          access,
+          geocodingStatus: resolvedAddress ? resolvedAddress.geocodingStatus : null
+        }, "Conta criada. Enviamos um codigo de confirmacao para o seu e-mail.");
+      }
+
       const token = signToken(user);
       return created(res, {
         user: await serializeUser(user),
@@ -292,20 +335,61 @@ router.post(
 
 router.post(
   "/login",
+  captchaGuard,
   [
     body("email").isEmail().withMessage("Email invalido").normalizeEmail(),
     body("password").notEmpty().withMessage("Senha obrigatoria")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
+    const throttleKey = req.ip;
+    const lockedSeconds = loginThrottle.check(req.body.email, throttleKey);
+    if (lockedSeconds > 0) {
+      res.set("Retry-After", String(lockedSeconds));
+      throw new ApiError(429, `Muitas tentativas de login. Tente novamente em ${Math.ceil(lockedSeconds / 60)} minuto(s).`);
+    }
+
     const user = await findUserByEmail(req.body.email);
-    if (!user || !user.is_active) {
+    const matches = user && user.is_active
+      ? await comparePassword(req.body.password, user.password_hash)
+      : await comparePassword(req.body.password, await getDummyHash()).then(() => false);
+
+    if (!user || !user.is_active || !matches) {
+      loginThrottle.fail(req.body.email, throttleKey);
       throw new ApiError(401, "E-mail ou senha incorretos");
     }
 
-    const matches = await comparePassword(req.body.password, user.password_hash);
-    if (!matches) {
-      throw new ApiError(401, "E-mail ou senha incorretos");
+    loginThrottle.success(req.body.email, throttleKey);
+
+    // 2o fator: senha correta ainda NAO entra. Enviamos um codigo para o e-mail cadastrado (celular) e so
+    // emitimos o token depois que ele for digitado em /auth/verify-email.
+    if (env.emailVerification.loginCodeRequired || (env.emailVerification.required && !user.email_verified_at)) {
+      const last = (await db.query(
+        "SELECT created_at, used_at FROM email_verification_codes WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+        [user.id]
+      ))[0];
+      const fresh = last && !last.used_at &&
+        (Date.now() - new Date(last.created_at).getTime()) / 1000 < env.emailVerification.resendCooldownSeconds;
+      let emailSent = true;
+      if (!fresh) {
+        const code = await issueVerificationCode(user, { ip: req.ip });
+        const result = await sendCode(user, code, "login");
+        emailSent = !result.skipped;
+        if (result.skipped && env.isProduction) {
+          throw new ApiError(503, "Nao foi possivel enviar o codigo de acesso por e-mail. Tente novamente em instantes.");
+        }
+      }
+      await auditLog(user.id, "auth.login_code_sent", "users", user.id, { ip: req.ip });
+      return success(res, {
+        requiresEmailVerification: true,
+        email: user.email,
+        emailSent,
+        token: null
+      }, "Enviamos um codigo de acesso para o seu e-mail.");
+    }
+
+    if (passwordNeedsRehash(user.password_hash)) {
+      await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [await hashPassword(req.body.password), user.id]);
     }
 
     const token = signToken(user);
@@ -320,7 +404,38 @@ router.post(
 );
 
 router.post(
+  "/verify-email",
+  [
+    body("email").isEmail().withMessage("Email invalido").normalizeEmail(),
+    body("code").trim().matches(/^\d{6}$/).withMessage("O codigo tem 6 numeros")
+  ],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    await verifyEmailCode(req.body.email, req.body.code);
+    const user = await findUserByEmail(req.body.email);
+    const token = signToken(user);
+    await auditLog(user.id, "auth.login", "users", user.id, { via: "email_code" });
+    return success(res, {
+      token,
+      user: await serializeUser(user)
+    }, "Acesso confirmado com sucesso");
+  })
+);
+
+router.post(
+  "/resend-verification",
+  [body("email").isEmail().withMessage("Email invalido").normalizeEmail()],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    await resendVerificationCode(req.body.email, { ip: req.ip });
+    // Resposta igual exista o e-mail ou nao (nao revela quem esta cadastrado).
+    return success(res, null, "Se o e-mail estiver pendente de confirmacao, enviamos um novo codigo.");
+  })
+);
+
+router.post(
   "/forgot-password",
+  captchaGuard,
   [body("email").isEmail().withMessage("Email invalido").normalizeEmail()],
   validateRequest,
   asyncHandler(async (req, res) => {

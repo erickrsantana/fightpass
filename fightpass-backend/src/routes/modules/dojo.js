@@ -8,6 +8,7 @@ const {
   getDojoPlan,
   getInstitutionSubscription,
   createDojoPaymentSimulation,
+  createDojoGatewayPayment,
   confirmDojoPayment
 } = require("../../services/dojoSubscriptionService");
 
@@ -118,6 +119,27 @@ router.post(
       userAgent: req.headers["user-agent"]
     });
     return success(res, payment, "Cobranca DOJO ficticia gerada com sucesso", 201);
+  })
+);
+
+router.post(
+  "/payments/checkout",
+  auth(["institution_admin"]),
+  [body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida")],
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    await ensureInstitutionAccess(req.user.sub, req.body.institutionId, ["institution_admin"]);
+    const users = await db.query("SELECT email FROM users WHERE id = ? LIMIT 1", [req.user.sub]);
+    const payment = await createDojoGatewayPayment({
+      institutionId: req.body.institutionId,
+      userId: req.user.sub,
+      userEmail: users[0] && users[0].email,
+      termsAccepted: req.body.termsAccepted,
+      termsVersion: req.body.termsVersion,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"]
+    });
+    return success(res, payment, "Checkout criado. Redirecione para o pagamento.", 201);
   })
 );
 

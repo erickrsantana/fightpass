@@ -3,6 +3,8 @@ const { ApiError } = require("../lib/http");
 const { auditLog } = require("../lib/business");
 const { ensureTermsAccepted } = require("./termsService");
 const { validateCard, makeReceiptCode, PIX_TTL_MINUTES, BOLETO_TTL_DAYS, MAX_INSTALLMENTS } = require("../lib/cardPayments");
+const mercadoPago = require("../lib/mercadopago");
+const env = require("../config/env");
 
 function addDays(date, days) {
   const next = new Date(date);
@@ -78,6 +80,9 @@ async function ensureSubscriptionExists(institutionId, connection = null) {
 }
 
 async function createDojoPaymentSimulation({ institutionId, method, userId, termsAccepted, termsVersion, ipAddress, userAgent, card, installments }) {
+  if (env.payments.mode === "gateway") {
+    throw new ApiError(403, "Pagamento simulado desativado. Use o pagamento online.");
+  }
   const plan = await getDojoPlan();
   const isCard = method === "credit_card" || method === "debit_card";
   const cardInfo = isCard ? validateCard(card) : null;
@@ -160,47 +165,108 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
   }
 }
 
-async function confirmDojoPayment(paymentId, userId) {
-  const rows = await db.query(
-    `SELECT dp.id, dp.institution_id, dp.plan_id, dp.status, dp.expires_at, pp.duration_days, pp.price_cents,
-            dp.contract_accepted, dp.terms_acceptance_id
-     FROM dojo_payment_simulations dp
-     INNER JOIN platform_plans pp ON pp.id = dp.plan_id
-     WHERE dp.id = ?
-     LIMIT 1`,
-    [paymentId]
-  );
-  const payment = rows[0];
+// Cobranca real do Plano DOJO pelo Mercado Pago (o valor vem do banco, nunca do navegador).
+async function createDojoGatewayPayment({ institutionId, userId, userEmail, termsAccepted, termsVersion, ipAddress, userAgent }) {
+  if (env.payments.mode !== "gateway") throw new ApiError(409, "Pagamento online nao esta ativado neste ambiente");
+  if (!mercadoPago.isConfigured()) throw new ApiError(503, "Pagamento online indisponivel no momento");
 
-  if (!payment) {
-    throw new ApiError(404, "Pagamento DOJO nao encontrado");
+  const plan = await getDojoPlan();
+  const connection = await db.pool.getConnection();
+  let paymentId;
+
+  try {
+    await connection.beginTransaction();
+    const termsAcceptance = await ensureTermsAccepted({
+      userId,
+      accepted: termsAccepted,
+      version: termsVersion,
+      origin: "contratacao_plano",
+      ipAddress,
+      userAgent
+    }, connection);
+
+    const [insert] = await connection.execute(
+      `INSERT INTO dojo_payment_simulations
+         (institution_id, plan_id, method, amount_cents, installments, terms_acceptance_id,
+          contract_accepted, contract_accepted_at, contract_text_version, status, gateway_provider)
+       VALUES (?, ?, 'gateway', ?, 1, ?, 1, NOW(), ?, 'pending', 'mercadopago')`,
+      [institutionId, plan.id, plan.price_cents, termsAcceptance.id, termsVersion]
+    );
+    paymentId = insert.insertId;
+    await auditLog(userId, "dojo.payment_checkout_created", "dojo_payment_simulations", paymentId, {
+      institutionId, amountCents: plan.price_cents, provider: "mercadopago"
+    }, connection);
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
 
-  if (payment.status === "paid") {
-    throw new ApiError(409, "Pagamento DOJO ja confirmado");
+  try {
+    const preference = await mercadoPago.createPreference({
+      title: `FightPass - ${plan.name}`,
+      amountCents: plan.price_cents,
+      externalReference: `D-${paymentId}`,
+      payerEmail: userEmail,
+      backPath: "meus-pagamentos.html"
+    });
+    await db.query(
+      "UPDATE dojo_payment_simulations SET gateway_preference_id = ?, gateway_checkout_url = ? WHERE id = ?",
+      [preference.preferenceId, preference.checkoutUrl, paymentId]
+    );
+    return { id: paymentId, amountCents: plan.price_cents, checkoutUrl: preference.checkoutUrl, status: "pending" };
+  } catch (error) {
+    await db.query("UPDATE dojo_payment_simulations SET status = 'cancelled' WHERE id = ?", [paymentId]);
+    throw error;
   }
+}
 
-  if (payment.status === "cancelled") {
-    throw new ApiError(409, "Cobranca cancelada");
-  }
-
-  if (payment.expires_at && new Date(payment.expires_at) < new Date()) {
-    throw new ApiError(410, "Cobranca expirada. Gere uma nova.");
-  }
-
-  if (!payment.contract_accepted || !payment.terms_acceptance_id) {
-    throw new ApiError(422, "Termos de Uso do Plano DOJO nao foram aceitos");
-  }
-
-  const today = new Date();
-  const paidUntil = addDays(today, payment.duration_days);
+// Ativa a assinatura DOJO. Fluxo simulado: gestor confirma. Fluxo gateway: webhook do Mercado Pago.
+async function activateDojoPayment({ paymentId, userId = null, gateway = false, gatewayPaymentId = null }) {
   const connection = await db.pool.getConnection();
 
   try {
     await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      `SELECT dp.id, dp.institution_id, dp.plan_id, dp.status, dp.method, dp.expires_at, pp.duration_days, pp.price_cents,
+              dp.contract_accepted, dp.terms_acceptance_id, i.owner_user_id
+       FROM dojo_payment_simulations dp
+       INNER JOIN platform_plans pp ON pp.id = dp.plan_id
+       INNER JOIN institutions i ON i.id = dp.institution_id
+       WHERE dp.id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [paymentId]
+    );
+    const payment = rows[0];
+
+    if (!payment) throw new ApiError(404, "Pagamento DOJO nao encontrado");
+    if (!gateway && payment.method === "gateway") {
+      throw new ApiError(403, "Esta cobranca so e confirmada pelo gateway de pagamento");
+    }
+    if (payment.status === "paid") {
+      if (gateway) { await connection.commit(); return { paymentId: payment.id, alreadyPaid: true }; }
+      throw new ApiError(409, "Pagamento DOJO ja confirmado");
+    }
+    if (payment.status === "cancelled" && !gateway) throw new ApiError(409, "Cobranca cancelada");
+    if (!gateway && payment.expires_at && new Date(payment.expires_at) < new Date()) {
+      throw new ApiError(410, "Cobranca expirada. Gere uma nova.");
+    }
+    if (!payment.contract_accepted || !payment.terms_acceptance_id) {
+      throw new ApiError(422, "Termos de Uso do Plano DOJO nao foram aceitos");
+    }
+
+    const actor = userId || payment.owner_user_id;
+    const paidUntil = addDays(new Date(), payment.duration_days);
+
     await connection.execute(
-      "UPDATE dojo_payment_simulations SET status = 'paid', paid_at = NOW(), receipt_code = ? WHERE id = ?",
-      [makeReceiptCode(payment.id).replace("FP-", "FP-DOJO-"), payment.id]
+      `UPDATE dojo_payment_simulations
+       SET status = 'paid', paid_at = NOW(), receipt_code = ?,
+           gateway_payment_id = COALESCE(?, gateway_payment_id), gateway_status = IF(? IS NULL, gateway_status, 'approved')
+       WHERE id = ?`,
+      [makeReceiptCode(payment.id).replace("FP-", "FP-DOJO-"), gatewayPaymentId, gatewayPaymentId, payment.id]
     );
     await connection.execute(
       `INSERT INTO institution_platform_subscriptions
@@ -215,21 +281,29 @@ async function confirmDojoPayment(paymentId, userId) {
          cancelled_at = NULL,
          contract_accepted_at = NOW(),
          contract_accepted_by = ?`,
-      [payment.institution_id, payment.plan_id, payment.price_cents, paidUntil, paidUntil, userId, userId]
+      [payment.institution_id, payment.plan_id, payment.price_cents, paidUntil, paidUntil, actor, actor]
     );
-    await auditLog(userId, "dojo.payment_simulation.confirm", "dojo_payment_simulations", payment.id, {
+    await auditLog(actor, gateway ? "dojo.payment_gateway_approved" : "dojo.payment_simulation.confirm", "dojo_payment_simulations", payment.id, {
       institutionId: payment.institution_id,
-      paidUntil
+      paidUntil,
+      gatewayPaymentId
     }, connection);
     await connection.commit();
+    return { paymentId: payment.id, institutionId: payment.institution_id };
   } catch (error) {
     await connection.rollback();
     throw error;
   } finally {
     connection.release();
   }
+}
 
-  return getInstitutionSubscription(payment.institution_id);
+async function confirmDojoPayment(paymentId, userId) {
+  if (env.payments.mode === "gateway") {
+    throw new ApiError(403, "Pagamento simulado desativado. Use o pagamento online.");
+  }
+  const result = await activateDojoPayment({ paymentId, userId });
+  return getInstitutionSubscription(result.institutionId);
 }
 
 module.exports = {
@@ -238,5 +312,7 @@ module.exports = {
   ensureActiveInstitutionSubscription,
   ensureSubscriptionExists,
   createDojoPaymentSimulation,
+  createDojoGatewayPayment,
+  activateDojoPayment,
   confirmDojoPayment
 };

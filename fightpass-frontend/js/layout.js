@@ -7,16 +7,21 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   const cachedUser = api ? api.getStoredUser() : null;
-  const userName = cachedUser ? cachedUser.name : "Usuário";
+  // Tudo que vem do usuario e escapado antes de entrar no HTML (evita XSS armazenado via nome/foto).
+  const escapeHtml = (value) => String(value == null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  const rawUserName = cachedUser ? cachedUser.name : "Usuário";
+  const userName = escapeHtml(rawUserName);
   const userRole = cachedUser ? api.roleLabel(cachedUser.role) : "Sessão";
   const isPlatform = Boolean(cachedUser) && cachedUser.role === "platform_admin";
   const isInstructor = Boolean(cachedUser) && cachedUser.role === "instructor";
   const homeHref = isPlatform ? "plataforma.html" : isInstructor ? "modalidades.html" : "dashboard.html";
 
   const avatarSrc = cachedUser ? (cachedUser.avatarUrl || cachedUser.avatar_url) : "";
-  const safeSrc = avatarSrc && /^(https?:\/\/|data:image\/)/.test(avatarSrc) ? avatarSrc.replace(/"/g, "&quot;") : "";
-  const initialsText = String(userName).trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "FP";
-  const headerAvatar = safeSrc ? `<img src="${safeSrc}" alt="">` : `<span>${initialsText}</span>`;
+  const safeSrc = avatarSrc && /^(https?:\/\/|data:image\/)/.test(avatarSrc) ? escapeHtml(avatarSrc) : "";
+  const initialsText = String(rawUserName).trim().split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase();
+  const initialsSafe = escapeHtml(initialsText || "FP");
+  const headerAvatar = safeSrc ? `<img src="${safeSrc}" alt="">` : `<span>${initialsSafe}</span>`;
 
   const headerHTML = `
     <header class="top-header">
@@ -26,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         <div class="header-avatar">${headerAvatar}</div>
         <div class="user-text">
           <span class="user-name">${userName}</span>
-          <span class="user-role">${userRole}</span>
+          <span class="user-role">${escapeHtml(userRole)}</span>
         </div>
       </div>
       <button class="logout-button" type="button" id="logout-button">Sair</button>

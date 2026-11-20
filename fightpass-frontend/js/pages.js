@@ -139,7 +139,14 @@
       setMessage("#login-message", "Autenticando...", "loading");
       const data = formData(form);
       try {
-        const response = await api.login(data.email, data.password);
+        const captchaToken = await window.FightPassCaptcha.tokenFor(form);
+        const response = await api.login(data.email, data.password, captchaToken);
+        if (response.data.requiresEmailVerification) {
+          // 2o fator: o acesso so e liberado depois do codigo enviado ao e-mail.
+          sessionStorage.setItem("fightpass.pendingEmail", response.data.email || data.email);
+          window.location.href = "verificar-email.html";
+          return;
+        }
         api.saveSession(response.data);
         if (response.data.user.role === "institution_admin") {
           window.location.href = "planos.html";
@@ -147,8 +154,65 @@
           api.redirectByRole(response.data.user);
         }
       } catch (error) {
+        if (error.details && error.details.code === "EMAIL_NOT_VERIFIED") {
+          sessionStorage.setItem("fightpass.pendingEmail", error.details.email || data.email);
+          window.location.href = "verificar-email.html";
+          return;
+        }
+        window.FightPassCaptcha.reset(form);
         applyFieldErrors(form, error.details);
         setMessage("#login-message", error.message, "error", error.details);
+      }
+    });
+  }
+
+  function goToEmailVerification(email) {
+    try { sessionStorage.setItem("fightpass.pendingEmail", email); } catch (e) { /* ignore */ }
+    window.location.href = "verificar-email.html";
+  }
+
+  async function initVerificarEmail() {
+    api.redirectIfAuthenticated();
+    const form = $("#verify-form");
+    let email = "";
+    try { email = sessionStorage.getItem("fightpass.pendingEmail") || ""; } catch (e) { /* ignore */ }
+    if (!email) { window.location.href = "login.html"; return; }
+    setText("#verify-email", email);
+    const resend = $("#resend-code");
+    let wait = 0;
+    let timer = null;
+
+    function tick() {
+      resend.disabled = wait > 0;
+      resend.textContent = wait > 0 ? `Reenviar codigo em ${wait}s` : "Reenviar codigo";
+      if (wait > 0) { wait -= 1; timer = setTimeout(tick, 1000); }
+    }
+    wait = 60; tick();
+
+    resend.addEventListener("click", async () => {
+      clearTimeout(timer);
+      wait = 60; tick();
+      try {
+        const r = await api.resendVerification(email);
+        setMessage("#verify-message", r.message, "success");
+      } catch (error) {
+        setMessage("#verify-message", error.message, "error");
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const code = String(new FormData(form).get("code") || "").replace(/\D/g, "");
+      setMessage("#verify-message", "Conferindo codigo...", "loading");
+      try {
+        const response = await api.verifyEmail(email, code);
+        api.saveSession(response.data);
+        try { sessionStorage.removeItem("fightpass.pendingEmail"); } catch (e) { /* ignore */ }
+        api.setFlash("Acesso confirmado. Bem-vindo ao FightPass!", "success");
+        if (response.data.user.role === "institution_admin") window.location.href = "planos.html";
+        else api.redirectByRole(response.data.user);
+      } catch (error) {
+        setMessage("#verify-message", error.message, "error");
       }
     });
   }
@@ -183,7 +247,9 @@
       setMessage("#register-message", "Criando conta...", "loading");
       const data = formData(form);
       try {
+        const captchaToken = await window.FightPassCaptcha.tokenFor(form);
         const response = await api.register({
+          captchaToken,
           name: data.name,
           email: data.email,
           password: data.password,
@@ -194,6 +260,7 @@
           institutionName: data.institutionName || data.name,
           ...termsAcceptance.payload()
         });
+        if (response.data.requiresEmailVerification) { goToEmailVerification(response.data.email); return; }
         api.saveSession(response.data);
         api.setFlash(
           response.data.user.role === "institution_admin"
@@ -253,7 +320,9 @@
       setMessage("#register-message", "Cadastrando academia e localizando no mapa...", "loading");
       const data = formData(form);
       try {
+        const captchaToken = await window.FightPassCaptcha.tokenFor(form);
         const response = await api.register({
+          captchaToken,
           accountType: "institution_admin",
           name: data.name,
           email: data.email,
@@ -267,6 +336,7 @@
           modalities,
           ...termsAcceptance.payload()
         });
+        if (response.data.requiresEmailVerification) { goToEmailVerification(response.data.email); return; }
         api.saveSession(response.data);
         api.setFlash(
           response.data.geocodingStatus === "success"
@@ -297,10 +367,12 @@
       setMessage("#recovery-message", "Enviando solicitação..", "loading");
       try {
         const data = formData(emailForm);
-        const response = await api.forgotPassword(data.email);
+        const captchaToken = await window.FightPassCaptcha.tokenFor(emailForm);
+        const response = await api.forgotPassword(data.email, captchaToken);
         api.setFlash(response.message, "success");
         window.location.href = "sucesso-email.html";
       } catch (error) {
+        window.FightPassCaptcha.reset(emailForm);
         setMessage("#recovery-message", error.message, "error", error.details);
       }
     });
@@ -2189,6 +2261,7 @@
 
   const pages = {
     login: initLogin,
+    "verificar-email": initVerificarEmail,
     cadastro: initCadastro,
     "cadastro-academia": initCadastroAcademia,
     "recuperar-senha": initRecuperacaoSenha,

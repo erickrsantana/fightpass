@@ -14,6 +14,16 @@
     const user = await api.requireAuth(["student", "institution_admin"]);
     if (!user) return;
     const message = $("#pay-message");
+    const gw = new URLSearchParams(window.location.search).get("gateway");
+    if (gw) {
+      const texts = {
+        success: ["Pagamento recebido! A confirmacao pode levar alguns instantes; atualize a pagina se ainda estiver pendente.", "success"],
+        pending: ["Pagamento pendente. Assim que o Mercado Pago confirmar, seu acesso sera liberado.", "info"],
+        failure: ["O pagamento nao foi concluido. Voce pode tentar novamente em Planos.", "error"]
+      };
+      const t = texts[gw];
+      if (t) { message.hidden = false; message.className = `state-message ${t[1]}`; message.textContent = t[0]; }
+    }
     try {
       const response = await api.request(user.role === "institution_admin" ? `/dojo/payments/mine?institutionId=${api.firstInstitutionId(user)}` : "/payments/mine");
       const { payments, totals } = response.data;
