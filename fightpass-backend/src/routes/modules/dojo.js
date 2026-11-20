@@ -267,7 +267,7 @@ router.post(
   [
     body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
     body("name").trim().isLength({ min: 3, max: 150 }).withMessage("Informe o nome do instrutor"),
-    body("email").trim().isEmail().withMessage("E-mail invalido").normalizeEmail(),
+    body("email").trim().isEmail().withMessage("E-mail invalido").normalizeEmail({ gmail_remove_subaddress: false }),
     body("document").trim().custom((value) => isValidCpf(value)).withMessage("CPF invalido"),
     body("phone").optional({ checkFalsy: true }).trim().isLength({ min: 10, max: 20 }).withMessage("Telefone invalido"),
     body("password")

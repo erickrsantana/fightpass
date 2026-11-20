@@ -116,7 +116,7 @@ router.post(
   captchaGuard,
   [
     body("name").trim().notEmpty().withMessage("Nome obrigatorio"),
-    body("email").isEmail().withMessage("Email invalido").normalizeEmail(),
+    body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
     body("password")
       .isLength({ min: 8 }).withMessage("A senha deve ter no minimo 8 caracteres")
       .matches(/[A-Z]/).withMessage("A senha deve conter letra maiuscula")
@@ -337,7 +337,7 @@ router.post(
   "/login",
   captchaGuard,
   [
-    body("email").isEmail().withMessage("Email invalido").normalizeEmail(),
+    body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
     body("password").notEmpty().withMessage("Senha obrigatoria")
   ],
   validateRequest,
@@ -406,7 +406,7 @@ router.post(
 router.post(
   "/verify-email",
   [
-    body("email").isEmail().withMessage("Email invalido").normalizeEmail(),
+    body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
     body("code").trim().matches(/^\d{6}$/).withMessage("O codigo tem 6 numeros")
   ],
   validateRequest,
@@ -424,7 +424,7 @@ router.post(
 
 router.post(
   "/resend-verification",
-  [body("email").isEmail().withMessage("Email invalido").normalizeEmail()],
+  [body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false })],
   validateRequest,
   asyncHandler(async (req, res) => {
     await resendVerificationCode(req.body.email, { ip: req.ip });
@@ -436,7 +436,7 @@ router.post(
 router.post(
   "/forgot-password",
   captchaGuard,
-  [body("email").isEmail().withMessage("Email invalido").normalizeEmail()],
+  [body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false })],
   validateRequest,
   asyncHandler(async (req, res) => {
     const user = await findUserByEmail(req.body.email);
