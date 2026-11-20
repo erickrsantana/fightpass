@@ -303,7 +303,13 @@ async function resolveCep(zipCode, number = null, complement = null) {
 
 async function upsertInstitutionAddress(institutionId, payload, connection = null) {
   const executor = connection || db;
-  const resolved = await resolveCep(payload.zipCode, payload.number, payload.complement);
+  let resolved = await resolveCep(payload.zipCode, payload.number, payload.complement);
+
+  // Coordenadas informadas manualmente pelo administrador (quando o CEP nao localiza sozinho)
+  const manual = payload.latitude && payload.longitude ? validCoords(payload.latitude, payload.longitude) : null;
+  if (manual) {
+    resolved = success(resolved, manual, "manual", resolved.formattedAddress);
+  }
 
   await executor.query(
     `INSERT INTO addresses

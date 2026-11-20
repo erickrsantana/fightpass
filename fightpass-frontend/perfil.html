@@ -80,6 +80,35 @@
 
         <section id="profile-access" class="card-white" style="margin-top: 24px;" hidden></section>
 
+        <section id="profile-address" class="card-white" style="margin-top: 24px;" hidden>
+            <h2 style="font-size: 20px; margin-bottom: 8px;">Endereço da academia</h2>
+            <p style="color:#64748B; margin-bottom: 16px;">É este endereço que aparece no mapa para os alunos.</p>
+            <div id="address-message" hidden></div>
+            <div id="address-current" class="notice-card" style="margin-bottom: 16px;">Carregando endereço...</div>
+            <form id="address-form" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: end;">
+                <div class="input-group">
+                    <label for="address-zip">CEP</label>
+                    <input id="address-zip" name="zipCode" type="text" class="input-field" placeholder="00000-000" maxlength="9" required>
+                </div>
+                <div class="input-group">
+                    <label for="address-number">Número</label>
+                    <input id="address-number" name="number" type="text" class="input-field" placeholder="Ex.: 120" required>
+                </div>
+                <div class="input-group">
+                    <label for="address-complement">Complemento</label>
+                    <input id="address-complement" name="complement" type="text" class="input-field" placeholder="Opcional">
+                </div>
+                <div class="input-group" style="grid-column: 1 / -1;">
+                    <label for="address-coords">Coordenadas do mapa (só se o pino não aparecer)</label>
+                    <input id="address-coords" type="text" class="input-field" placeholder="Ex.: -23.6523, -46.7021">
+                    <small class="photo-hint">No Google Maps, clique com o botão direito no local da academia e clique nos números que aparecem no topo do menu para copiar. Cole aqui.</small>
+                </div>
+                <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end;">
+                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 40px;">Salvar e localizar no mapa</button>
+                </div>
+            </form>
+        </section>
+
         <section class="card-white" style="margin-top: 24px;">
             <h2 style="font-size: 20px; margin-bottom: 20px;">Alterar senha</h2>
             <div id="password-message" hidden></div>

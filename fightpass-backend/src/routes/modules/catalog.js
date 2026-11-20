@@ -22,7 +22,9 @@ router.put(
   [
     body("zipCode").trim().notEmpty().withMessage("CEP obrigatorio"),
     body("number").trim().notEmpty().withMessage("Numero obrigatorio"),
-    body("complement").optional({ nullable: true }).trim()
+    body("complement").optional({ nullable: true }).trim(),
+    body("latitude").optional({ nullable: true, checkFalsy: true }).isFloat({ min: -90, max: 90 }).withMessage("Latitude invalida"),
+    body("longitude").optional({ nullable: true, checkFalsy: true }).isFloat({ min: -180, max: 180 }).withMessage("Longitude invalida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -30,7 +32,9 @@ router.put(
     const address = await upsertInstitutionAddress(req.params.id, {
       zipCode: req.body.zipCode,
       number: req.body.number,
-      complement: req.body.complement || null
+      complement: req.body.complement || null,
+      latitude: req.body.latitude || null,
+      longitude: req.body.longitude || null
     });
     await auditLog(req.user.sub, "institutions.address.update", "institutions", req.params.id, {
       zipCode: address.zipCode,

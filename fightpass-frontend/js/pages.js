@@ -1194,6 +1194,69 @@
       }
     });
 
+    // ---- Endereço da academia (somente administrador da academia) ----
+    const addressPanel = $("#profile-address");
+    const addressInstitutionId = user.role === "institution_admin" ? api.firstInstitutionId(user) : null;
+    if (addressPanel && addressInstitutionId) {
+      addressPanel.hidden = false;
+      const current = $("#address-current");
+
+      function renderAddressStatus(data) {
+        const hasPin = data && data.latitude && data.longitude;
+        const text = data && (data.formatted_address || data.formattedAddress)
+          ? (data.formatted_address || data.formattedAddress)
+          : "Nenhum endereço cadastrado ainda.";
+        current.className = "notice-card" + (hasPin ? "" : " warning");
+        current.innerHTML = `<strong>${html(text)}</strong><br>` + (hasPin
+          ? "Aparece no mapa."
+          : "Ainda NÃO aparece no mapa. Confira o CEP e o número e salve de novo. Se continuar, informe as coordenadas abaixo.");
+      }
+
+      async function loadAddress() {
+        try {
+          const response = await api.request(`/institutions/${addressInstitutionId}`);
+          const d = response.data || {};
+          renderAddressStatus(d);
+          $("#address-zip").value = d.zip_code || "";
+          $("#address-number").value = d.number || "";
+          $("#address-complement").value = d.complement || "";
+        } catch (error) {
+          setMessage("#address-message", error.message, "error", error.details);
+        }
+      }
+
+      $("#address-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setMessage("#address-message", "Salvando e localizando no mapa...", "loading");
+        const data = formData(event.currentTarget);
+        const body = { zipCode: data.zipCode, number: data.number, complement: data.complement || null };
+        const raw = String($("#address-coords").value || "").trim();
+        if (raw) {
+          const nums = raw.match(/-?\d+(?:[.,]\d+)?/g);
+          if (!nums || nums.length < 2) {
+            setMessage("#address-message", "Coordenadas inválidas. Use o formato: -23.6523, -46.7021", "error");
+            return;
+          }
+          body.latitude = nums[0].replace(",", ".");
+          body.longitude = nums[1].replace(",", ".");
+        }
+        try {
+          const response = await api.request(`/institutions/${addressInstitutionId}/address`, { method: "PUT", body });
+          renderAddressStatus(response.data);
+          const ok = response.data && response.data.latitude && response.data.longitude;
+          setMessage("#address-message", ok
+            ? "Endereço salvo e localizado no mapa."
+            : "Endereço salvo, mas não foi possível localizar no mapa. Informe as coordenadas abaixo e salve de novo.",
+            ok ? "success" : "error");
+          if (ok) $("#address-coords").value = "";
+        } catch (error) {
+          setMessage("#address-message", error.message, "error", error.details);
+        }
+      });
+
+      loadAddress();
+    }
+
     const accessPanel = $("#profile-access");
     if (accessPanel) {
       accessPanel.addEventListener("click", async (event) => {
