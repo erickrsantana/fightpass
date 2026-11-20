@@ -190,7 +190,7 @@
     try {
       user = await me();
     } catch (error) {
-      setFlash("Sua sessão expirou. Entre novamente.", "error");
+      clearSession(); setFlash("Sua sessão expirou. Entre novamente.", "error");
       window.location.href = "login.html";
       return null;
     }
