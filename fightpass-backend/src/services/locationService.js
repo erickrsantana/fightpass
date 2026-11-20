@@ -144,59 +144,125 @@ async function geocodeWithGoogle(formattedAddress, address) {
   };
 }
 
-async function geocodeWithOpenStreetMap(formattedAddress, address) {
-  const params = new URLSearchParams({
-    format: "jsonv2",
-    q: `${formattedAddress}, Brasil`,
-    countrycodes: "br",
-    limit: "1"
-  });
+function validCoords(lat, lng) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude === 0 && longitude === 0) return null;
+  if (latitude < -34 || latitude > 6 || longitude < -74 || longitude > -28) return null; // fora do Brasil
+  return { latitude, longitude };
+}
 
-  const data = await fetchJson(`${env.location.openStreetMapGeocodingUrl}?${params.toString()}`, {
-    headers: {
-      "User-Agent": `${env.appName}/1.0 (prototipo academico FightPass)`
-    }
-  });
-  const result = Array.isArray(data) ? data[0] : null;
-
-  if (!result || !result.lat || !result.lon) {
-    return null;
-  }
-
+function success(address, coords, provider, formattedAddress) {
   return {
     ...address,
-    formattedAddress: result.display_name || formattedAddress,
-    latitude: Number(result.lat),
-    longitude: Number(result.lon),
-    geocodingProvider: "openstreetmap",
+    formattedAddress: formattedAddress || address.formattedAddress || buildFormattedAddress(address),
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    geocodingProvider: provider,
     geocodingStatus: "success",
     geocodedAt: new Date()
   };
 }
 
+async function nominatimSearch(params) {
+  const search = new URLSearchParams({
+    format: "jsonv2",
+    countrycodes: "br",
+    limit: "1",
+    ...params
+  });
+  const data = await fetchJson(`${env.location.openStreetMapGeocodingUrl}?${search.toString()}`, {
+    headers: {
+      "User-Agent": `${env.appName}/1.0 (prototipo academico FightPass; https://fightpassfinal.vercel.app)`,
+      "Accept-Language": "pt-BR"
+    }
+  });
+  const result = Array.isArray(data) ? data[0] : null;
+  if (!result) return null;
+  const coords = validCoords(result.lat, result.lon);
+  return coords ? { coords, displayName: result.display_name } : null;
+}
+
+async function geocodeWithBrasilApi(address) {
+  const digits = onlyDigits(address.zipCode);
+  const data = await fetchJson(`https://brasilapi.com.br/api/cep/v2/${digits}`);
+  const point = data && data.location && data.location.coordinates;
+  return point ? validCoords(point.latitude, point.longitude) : null;
+}
+
+async function geocodeWithAwesomeApi(address) {
+  const digits = onlyDigits(address.zipCode);
+  const data = await fetchJson(`https://cep.awesomeapi.com.br/json/${digits}`);
+  return data ? validCoords(data.lat, data.lng) : null;
+}
+
 async function geocodeAddress(address) {
   const formattedAddress = buildFormattedAddress(address);
+  const startedAt = Date.now();
+  const street = address.street || "";
+  const number = address.number || "";
+  const neighborhood = address.neighborhood || "";
+  const city = address.city || "";
+  const state = address.state || "";
+  const where = [city, state].filter(Boolean).join(", ");
 
-  try {
-    if (env.location.googleGeocodingApiKey) {
-      const googleResult = await geocodeWithGoogle(formattedAddress, address);
-      if (googleResult) {
-        return googleResult;
+  // Do mais preciso para o mais aproximado. Cada tentativa que falha e registrada e a proxima e tentada.
+  const attempts = [];
+  if (env.location.googleGeocodingApiKey) {
+    attempts.push(["google", async () => {
+      const found = await geocodeWithGoogle(formattedAddress, address);
+      return found ? { done: found } : null;
+    }]);
+  }
+  if (street) {
+    attempts.push(["osm:rua+numero", async () => {
+      const q = [[street, number].filter(Boolean).join(", "), neighborhood, where].filter(Boolean).join(", ");
+      const hit = await nominatimSearch({ q });
+      return hit ? { coords: hit.coords, name: hit.displayName, provider: "openstreetmap" } : null;
+    }]);
+    attempts.push(["osm:rua", async () => {
+      const hit = await nominatimSearch({ q: [street, where].filter(Boolean).join(", ") });
+      return hit ? { coords: hit.coords, name: hit.displayName, provider: "openstreetmap" } : null;
+    }]);
+  }
+  attempts.push(["brasilapi:cep", async () => {
+    const coords = await geocodeWithBrasilApi(address);
+    return coords ? { coords, provider: "brasilapi" } : null;
+  }]);
+  attempts.push(["awesomeapi:cep", async () => {
+    const coords = await geocodeWithAwesomeApi(address);
+    return coords ? { coords, provider: "awesomeapi" } : null;
+  }]);
+  attempts.push(["osm:cep", async () => {
+    const hit = await nominatimSearch({ postalcode: address.zipCode, country: "Brazil" });
+    return hit ? { coords: hit.coords, name: hit.displayName, provider: "openstreetmap" } : null;
+  }]);
+  if (neighborhood) {
+    attempts.push(["osm:bairro", async () => {
+      const hit = await nominatimSearch({ q: [neighborhood, where].filter(Boolean).join(", ") });
+      return hit ? { coords: hit.coords, name: hit.displayName, provider: "openstreetmap-bairro" } : null;
+    }]);
+  }
+
+  for (const [label, run] of attempts) {
+    if (Date.now() - startedAt > 15000) break;
+    try {
+      const found = await run();
+      if (found && found.done) return found.done;
+      if (found && found.coords) {
+        return success(address, found.coords, found.provider, formattedAddress);
       }
+      console.warn(`[geocoding] ${label}: sem resultado para ${address.zipCode}`);
+    } catch (error) {
+      console.warn(`[geocoding] ${label}: ${error.message}`);
     }
-
-    const openStreetMapResult = await geocodeWithOpenStreetMap(formattedAddress, address);
-    if (openStreetMapResult) {
-      return openStreetMapResult;
-    }
-  } catch (error) {
-    // Em caso de indisponibilidade externa, a aplicação mantém o endereço e sinaliza a pendência.
   }
 
   return {
     ...address,
     formattedAddress,
-    geocodingProvider: env.location.googleGeocodingApiKey ? "google/openstreetmap" : "openstreetmap",
+    geocodingProvider: "openstreetmap",
     geocodingStatus: "failed",
     geocodedAt: new Date()
   };
