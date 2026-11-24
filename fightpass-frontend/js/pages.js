@@ -362,6 +362,13 @@
     emailForm.hidden = Boolean(token);
     resetForm.hidden = !token;
 
+        const recoverySubtitle = document.querySelector(".recovery-card header p");
+    if (recoverySubtitle) {
+      recoverySubtitle.textContent = token
+        ? "Defina sua nova senha. Ela deve ter no mínimo 8 caracteres."
+        : "Informe o e-mail cadastrado para receber o link de redefinição de senha.";
+    }
+
     emailForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       setMessage("#recovery-message", "Enviando solicitação..", "loading");
