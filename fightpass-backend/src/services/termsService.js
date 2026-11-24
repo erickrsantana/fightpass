@@ -20,11 +20,11 @@ const CURRENT_TERMS = {
     },
     {
       title: "4. Direitos do usuário",
-      text: "De acordo com a Lei Geral de Proteção de Dados (LGPD), você possui direitos específicos sobre seus dados pessoais. Estes incluem confirmar a existência de tratamento, acessar dados completos, corrigir informações inexatas, solicitar anonimização ou eliminação de dados, obter portabilidade para outro fornecedor, revogar consentimentos e ser informado sobre compartilhamentos. Para exercer esses direitos, entre em contato através do e-mail privacidade@FightPass.com.br. Os dados são mantidos por períodos específicos: dados cadastrais por 5 anos após encerramento da conta, dados financeiros por 10 anos por obrigação legal, e dados de atividade por 3 anos para análises."
+      text: "De acordo com a Lei Geral de Proteção de Dados (LGPD), você possui direitos específicos sobre seus dados pessoais. Estes incluem confirmar a existência de tratamento, acessar dados completos, corrigir informações inexatas, solicitar anonimização ou eliminação de dados, obter portabilidade para outro fornecedor, revogar consentimentos e ser informado sobre compartilhamentos. Para exercer esses direitos, utilize a página \"Ajuda\", disponível no menu da própria plataforma. Os dados são mantidos por períodos específicos: dados cadastrais por 5 anos após encerramento da conta, dados financeiros por 10 anos por obrigação legal, e dados de atividade por 3 anos para análises."
     },
     {
       title: "5. Disposições gerais",
-      text: "Estes termos podem ser atualizados periodicamente para refletir melhorias na plataforma ou mudanças regulatórias. Os usuários são notificados sobre alterações significativas através dos canais oficiais de comunicação. O uso continuado dos serviços após tais notificações implica na aceitação das novas condições. Para questões relacionadas a estes termos ou à privacidade, disponibiliza-se canais de atendimento especializados, incluindo e-mail, telefone e endereço físico, com horário de funcionamento de segunda a sexta-feira, das 9h às 18h."
+      text: "Estes termos podem ser atualizados periodicamente para refletir melhorias na plataforma ou mudanças regulatórias. Os usuários são notificados sobre alterações significativas através dos canais oficiais de comunicação. O uso continuado dos serviços após tais notificações implica na aceitação das novas condições. Para questões relacionadas a estes termos ou à privacidade, disponibiliza-se a página \"Ajuda\", no menu da própria plataforma."
     },
     {
       title: "6. Responsabilidades e obrigações",
@@ -32,7 +32,7 @@ const CURRENT_TERMS = {
     },
     {
       title: "7. Suporte e atendimento",
-      text: "Para questões técnicas, dúvidas sobre funcionamento da plataforma ou problemas com acesso, é disponibilizado um canal de suporte especializado através do telefone (11) 4004-1234, com atendimento 24 horas para emergências relacionadas ao sistema. Para questões administrativas e jurídicas, o horário de atendimento é de segunda a sexta-feira das 9h às 18h, através do e-mail juridico@FightPass.com.br."
+      text: "Para questões técnicas, dúvidas sobre o funcionamento da plataforma ou problemas com acesso, o usuário pode utilizar as páginas \"Ajuda\" e \"Reclame aqui\", disponíveis no menu da própria plataforma, após o login."
     },
     {
       title: "8. Propriedade intelectual",
