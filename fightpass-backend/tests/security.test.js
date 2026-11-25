@@ -94,7 +94,7 @@ test("JSON malformado e corpo gigante sao tratados sem vazar pilha", async () =>
 test("mensagem de erro de login nao revela se o e-mail existe", async () => {
   const a = await call("/auth/login", { method: "POST", body: { email: `naoexiste-${Date.now()}@teste.com`, password: "Qualquer@123" } });
   assert.ok([401, 429].includes(a.status));
-  if (a.status === 401) assert.ok(!/nao encontrado|inexistente|not found/i.test(a.text));
+  if (a.status === 401) assert.ok(!/n[ãa]o encontrado|nao encontrado|inexistente|not found/i.test(a.text));
 });
 
 test("webhook de pagamento sem assinatura valida NUNCA libera acesso", async () => {

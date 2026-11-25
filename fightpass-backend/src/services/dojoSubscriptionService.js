@@ -25,7 +25,7 @@ async function getDojoPlan() {
   );
 
   if (!rows[0]) {
-    throw new ApiError(404, "Plano DOJO nao configurado");
+    throw new ApiError(404, "Plano DOJO não configurado");
   }
 
   return rows[0];
@@ -155,7 +155,7 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
       pixCode: method === "pix" ? code : null,
       boletoCode: method === "boleto" ? code : null,
       referenceCode: method !== "pix" && method !== "boleto" ? code : null,
-      prototypeNotice: "Pagamento ficticio para demonstracao academica. Nenhuma cobranca real sera executada."
+      prototypeNotice: "Pagamento fictício para demonstração acadêmica. Nenhuma cobrança real será executada."
     };
   } catch (error) {
     await connection.rollback();
@@ -167,8 +167,8 @@ async function createDojoPaymentSimulation({ institutionId, method, userId, term
 
 // Cobranca real do Plano DOJO pelo Mercado Pago (o valor vem do banco, nunca do navegador).
 async function createDojoGatewayPayment({ institutionId, userId, userEmail, termsAccepted, termsVersion, ipAddress, userAgent }) {
-  if (env.payments.mode !== "gateway") throw new ApiError(409, "Pagamento online nao esta ativado neste ambiente");
-  if (!mercadoPago.isConfigured()) throw new ApiError(503, "Pagamento online indisponivel no momento");
+  if (env.payments.mode !== "gateway") throw new ApiError(409, "Pagamento online não está ativado neste ambiente");
+  if (!mercadoPago.isConfigured()) throw new ApiError(503, "Pagamento online indisponível no momento");
 
   const plan = await getDojoPlan();
   const connection = await db.pool.getConnection();
@@ -242,20 +242,20 @@ async function activateDojoPayment({ paymentId, userId = null, gateway = false, 
     );
     const payment = rows[0];
 
-    if (!payment) throw new ApiError(404, "Pagamento DOJO nao encontrado");
+    if (!payment) throw new ApiError(404, "Pagamento DOJO não encontrado");
     if (!gateway && payment.method === "gateway") {
-      throw new ApiError(403, "Esta cobranca so e confirmada pelo gateway de pagamento");
+      throw new ApiError(403, "Esta cobrança só é confirmada pelo gateway de pagamento");
     }
     if (payment.status === "paid") {
       if (gateway) { await connection.commit(); return { paymentId: payment.id, alreadyPaid: true }; }
-      throw new ApiError(409, "Pagamento DOJO ja confirmado");
+      throw new ApiError(409, "Pagamento DOJO já confirmado");
     }
-    if (payment.status === "cancelled" && !gateway) throw new ApiError(409, "Cobranca cancelada");
+    if (payment.status === "cancelled" && !gateway) throw new ApiError(409, "Cobrança cancelada");
     if (!gateway && payment.expires_at && new Date(payment.expires_at) < new Date()) {
-      throw new ApiError(410, "Cobranca expirada. Gere uma nova.");
+      throw new ApiError(410, "Cobrança expirada. Gere uma nova.");
     }
     if (!payment.contract_accepted || !payment.terms_acceptance_id) {
-      throw new ApiError(422, "Termos de Uso do Plano DOJO nao foram aceitos");
+      throw new ApiError(422, "Termos de Uso do Plano DOJO não foram aceitos");
     }
 
     const actor = userId || payment.owner_user_id;

@@ -28,9 +28,9 @@ router.post(
   "/accept",
   auth(),
   [
-    body("termsAccepted").exists().withMessage("Aceite dos termos obrigatorio"),
-    body("termsVersion").notEmpty().withMessage("Versao dos termos obrigatoria"),
-    body("origin").isIn(["cadastro", "contratacao_plano"]).withMessage("Origem de aceite invalida")
+    body("termsAccepted").exists().withMessage("Aceite dos termos obrigatório"),
+    body("termsVersion").notEmpty().withMessage("Versão dos termos obrigatória"),
+    body("origin").isIn(["cadastro", "contratacao_plano"]).withMessage("Origem de aceite inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {

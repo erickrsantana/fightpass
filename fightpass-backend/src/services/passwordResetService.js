@@ -62,11 +62,11 @@ async function resetPassword(token, password) {
   const resetToken = rows[0];
 
   if (!resetToken || resetToken.used_at) {
-    throw new ApiError(400, "Token de redefinicao invalido");
+    throw new ApiError(400, "Token de redefinição inválido");
   }
 
   if (new Date(resetToken.expires_at) < new Date()) {
-    throw new ApiError(400, "Token de redefinicao expirado");
+    throw new ApiError(400, "Token de redefinição expirado");
   }
 
   const passwordHash = await hashPassword(password);

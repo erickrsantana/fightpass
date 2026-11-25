@@ -108,7 +108,7 @@ async function serializeUser(user) {
 
 // Publico: o navegador descobre se ha captcha e qual a chave publica (a secreta nunca sai do servidor).
 router.get("/captcha-config", (req, res) =>
-  success(res, { enabled: env.captcha.enabled, provider: "hcaptcha", siteKey: env.captcha.enabled ? env.captcha.siteKey : null }, "Configuracao do captcha")
+  success(res, { enabled: env.captcha.enabled, provider: "hcaptcha", siteKey: env.captcha.enabled ? env.captcha.siteKey : null }, "Configuração do captcha")
 );
 
 router.post(
@@ -117,7 +117,7 @@ router.post(
   [
     body("name")
       .trim()
-      .notEmpty().withMessage("Nome obrigatorio")
+      .notEmpty().withMessage("Nome obrigatório")
       .custom((value) => {
         if (value.split(/\s+/).filter(Boolean).length < 2 || value.length < 5) {
           throw new Error("Informe o nome completo (nome e sobrenome)");
@@ -127,33 +127,33 @@ router.post(
     body("phone").custom((value) => {
       const digits = onlyDigits(value || "");
       if (digits.length < 10 || digits.length > 11) {
-        throw new Error("Informe um telefone valido com DDD");
+        throw new Error("Informe um telefone válido com DDD");
       }
       return true;
     }),
-    body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
+    body("email").isEmail().withMessage("Email inválido").normalizeEmail({ gmail_remove_subaddress: false }),
     body("password")
-      .isLength({ min: 8 }).withMessage("A senha deve ter no minimo 8 caracteres")
-      .matches(/[A-Z]/).withMessage("A senha deve conter letra maiuscula")
-      .matches(/[a-z]/).withMessage("A senha deve conter letra minuscula")
-      .matches(/[0-9]/).withMessage("A senha deve conter numero"),
+      .isLength({ min: 8 }).withMessage("A senha deve ter no mínimo 8 caracteres")
+      .matches(/[A-Z]/).withMessage("A senha deve conter letra maiúscula")
+      .matches(/[a-z]/).withMessage("A senha deve conter letra minúscula")
+      .matches(/[0-9]/).withMessage("A senha deve conter número"),
     body("document")
       .trim()
-      .isLength({ min: 11 }).withMessage("Documento invalido")
+      .isLength({ min: 11 }).withMessage("Documento inválido")
       .custom((value, { req }) => {
         const accountType = req.body.accountType || "student";
         if (accountType === "student" && !isValidCpf(value)) {
-          throw new Error("CPF invalido para cadastro de aluno");
+          throw new Error("CPF inválido para cadastro de aluno");
         }
         if (accountType === "institution_admin" && ![11, 14].includes(onlyDigits(value).length)) {
-          throw new Error("Informe um CPF ou CNPJ valido para cadastrar a academia");
+          throw new Error("Informe um CPF ou CNPJ válido para cadastrar a academia");
         }
         return true;
       }),
     body("accountType")
       .optional()
       .isIn(["student", "institution_admin"])
-      .withMessage("Cadastro publico disponivel para alunos e academias"),
+      .withMessage("Cadastro público disponível para alunos e academias"),
     body("birthDate")
       .custom((value, { req }) => {
         const accountType = req.body.accountType || "student";
@@ -162,13 +162,13 @@ router.post(
           throw new Error("Informe a data de nascimento");
         }
         const birth = new Date(`${value}T00:00:00`);
-        if (Number.isNaN(birth.getTime())) throw new Error("Data de nascimento invalida");
+        if (Number.isNaN(birth.getTime())) throw new Error("Data de nascimento inválida");
         const today = new Date();
         let age = today.getFullYear() - birth.getFullYear();
         const monthDiff = today.getMonth() - birth.getMonth();
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
-        if (age < 18) throw new Error("O cadastro e permitido apenas para maiores de 18 anos");
-        if (age > 120) throw new Error("Data de nascimento invalida");
+        if (age < 18) throw new Error("O cadastro é permitido apenas para maiores de 18 anos");
+        if (age > 120) throw new Error("Data de nascimento inválida");
         return true;
       }),
     body("institutionName")
@@ -179,13 +179,13 @@ router.post(
     body("zipCode")
       .if(body("accountType").equals("institution_admin"))
       .custom((value) => onlyDigits(value).length === 8)
-      .withMessage("Informe um CEP valido da academia"),
+      .withMessage("Informe um CEP válido da academia"),
     body("number")
       .if(body("accountType").equals("institution_admin"))
       .trim()
       .notEmpty()
-      .withMessage("Informe o numero do endereco da academia"),
-    body("modalities").optional().isArray().withMessage("Modalidades invalidas")
+      .withMessage("Informe o número do endereço da academia"),
+    body("modalities").optional().isArray().withMessage("Modalidades inválidas")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -198,25 +198,25 @@ router.post(
 
     const existing = await findUserByEmail(req.body.email);
     if (existing) {
-      throw new ApiError(409, "Ja existe um usuario com este email");
+      throw new ApiError(409, "Já existe um usuário com este email");
     }
 
     const existingDocument = await findUserByDocument(req.body.document);
     if (existingDocument) {
-      throw new ApiError(409, "CPF/CNPJ ja cadastrado");
+      throw new ApiError(409, "CPF/CNPJ já cadastrado");
     }
 
     if (accountType === "institution_admin") {
       const existingInstitution = await findInstitutionByLegalDocument(req.body.document);
       if (existingInstitution) {
-        throw new ApiError(409, "Ja existe uma instituicao com este CNPJ");
+        throw new ApiError(409, "Já existe uma instituição com este CNPJ");
       }
     }
 
     const roles = await db.query("SELECT id, code FROM roles WHERE code = ? LIMIT 1", [accountType]);
     const role = roles[0];
     if (!role) {
-      throw new ApiError(400, "Perfil de usuario invalido");
+      throw new ApiError(400, "Perfil de usuário inválido");
     }
 
     let resolvedAddress = null;
@@ -225,7 +225,7 @@ router.post(
         resolvedAddress = await resolveCep(req.body.zipCode, req.body.number, req.body.complement || null);
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        throw new ApiError(502, "Nao foi possivel consultar o CEP agora. Tente novamente em instantes.");
+        throw new ApiError(502, "Não foi possível consultar o CEP agora. Tente novamente em instantes.");
       }
     }
 
@@ -341,7 +341,7 @@ router.post(
           institutionId,
           access,
           geocodingStatus: resolvedAddress ? resolvedAddress.geocodingStatus : null
-        }, "Conta criada. Enviamos um codigo de confirmacao para o seu e-mail.");
+        }, "Conta criada. Enviamos um código de confirmação para o seu e-mail.");
       }
 
       const token = signToken(user);
@@ -365,8 +365,8 @@ router.post(
   "/login",
   captchaGuard,
   [
-    body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
-    body("password").notEmpty().withMessage("Senha obrigatoria")
+    body("email").isEmail().withMessage("Email inválido").normalizeEmail({ gmail_remove_subaddress: false }),
+    body("password").notEmpty().withMessage("Senha obrigatória")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -404,7 +404,7 @@ router.post(
         const result = await sendCode(user, code, "login");
         emailSent = !result.skipped;
         if (result.skipped && env.isProduction) {
-          throw new ApiError(503, "Nao foi possivel enviar o codigo de acesso por e-mail. Tente novamente em instantes.");
+          throw new ApiError(503, "Não foi possível enviar o código de acesso por e-mail. Tente novamente em instantes.");
         }
       }
       await auditLog(user.id, "auth.login_code_sent", "users", user.id, { ip: req.ip });
@@ -413,7 +413,7 @@ router.post(
         email: user.email,
         emailSent,
         token: null
-      }, "Enviamos um codigo de acesso para o seu e-mail.");
+      }, "Enviamos um código de acesso para o seu e-mail.");
     }
 
     if (passwordNeedsRehash(user.password_hash)) {
@@ -434,8 +434,8 @@ router.post(
 router.post(
   "/verify-email",
   [
-    body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
-    body("code").trim().matches(/^\d{6}$/).withMessage("O codigo tem 6 numeros")
+    body("email").isEmail().withMessage("Email inválido").normalizeEmail({ gmail_remove_subaddress: false }),
+    body("code").trim().matches(/^\d{6}$/).withMessage("O código tem 6 números")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -452,19 +452,19 @@ router.post(
 
 router.post(
   "/resend-verification",
-  [body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false })],
+  [body("email").isEmail().withMessage("Email inválido").normalizeEmail({ gmail_remove_subaddress: false })],
   validateRequest,
   asyncHandler(async (req, res) => {
     await resendVerificationCode(req.body.email, { ip: req.ip });
     // Resposta igual exista o e-mail ou nao (nao revela quem esta cadastrado).
-    return success(res, null, "Se o e-mail estiver pendente de confirmacao, enviamos um novo codigo.");
+    return success(res, null, "Se o e-mail estiver pendente de confirmação, enviamos um novo código.");
   })
 );
 
 router.post(
   "/forgot-password",
   captchaGuard,
-  [body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false })],
+  [body("email").isEmail().withMessage("Email inválido").normalizeEmail({ gmail_remove_subaddress: false })],
   validateRequest,
   asyncHandler(async (req, res) => {
     const user = await findUserByEmail(req.body.email);
@@ -476,17 +476,17 @@ router.post(
         });
 
         if (emailResult.skipped) {
-          console.warn(`[email] Recuperacao de senha sem envio: ${emailResult.reason}`);
+          console.warn(`[email] Recuperação de senha sem envio: ${emailResult.reason}`);
         }
       } catch (error) {
-        console.error("[email] Falha ao enviar recuperacao de senha:", error.message);
+        console.error("[email] Falha ao enviar recuperação de senha:", error.message);
       }
     }
 
     return success(
       res,
-      { nextStep: "Verifique o email informado para acessar o link de redefinicao." },
-      "Se o email estiver cadastrado, as instrucoes de recuperacao serao enviadas."
+      { nextStep: "Verifique o email informado para acessar o link de redefinição." },
+      "Se o email estiver cadastrado, as instruções de recuperação serão enviadas."
     );
   })
 );
@@ -494,12 +494,12 @@ router.post(
 router.post(
   "/reset-password",
   [
-    body("token").notEmpty().withMessage("Token obrigatorio"),
+    body("token").notEmpty().withMessage("Token obrigatório"),
     body("password")
-      .isLength({ min: 8 }).withMessage("A senha deve ter no minimo 8 caracteres")
-      .matches(/[A-Z]/).withMessage("A senha deve conter letra maiuscula")
-      .matches(/[a-z]/).withMessage("A senha deve conter letra minuscula")
-      .matches(/[0-9]/).withMessage("A senha deve conter numero")
+      .isLength({ min: 8 }).withMessage("A senha deve ter no mínimo 8 caracteres")
+      .matches(/[A-Z]/).withMessage("A senha deve conter letra maiúscula")
+      .matches(/[a-z]/).withMessage("A senha deve conter letra minúscula")
+      .matches(/[0-9]/).withMessage("A senha deve conter número")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -514,7 +514,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = await findUserById(req.user.sub);
     if (!user) {
-      throw new ApiError(404, "Usuario nao encontrado");
+      throw new ApiError(404, "Usuário não encontrado");
     }
     return success(res, await serializeUser(user), "Perfil autenticado carregado com sucesso");
   })

@@ -8,24 +8,24 @@
 
   const FAQ = {
     student: [
-      ["Como agendo uma aula?", "Entre em Agendar, filtre pela modalidade, escolha o horario e confirme. Voce precisa de um plano ativo."],
+      ["Como agendo uma aula?", "Entre em Agendar, filtre pela modalidade, escolha o horário e confirme. Você precisa de um plano ativo."],
       ["Como troco de plano?", "Em Planos, clique em Alterar plano. Ao trocar um plano pago por outro, existe uma multa de 20% sobre o plano atual, mostrada antes de confirmar."],
-      ["Como faco o check-in?", "Na tela Check-in, gere o QR Code da sua aula agendada e apresente ao instrutor."],
-      ["Esqueci minha senha. E agora?", "Na tela de login, clique em Esqueci minha senha e siga as instrucoes."]
+      ["Como faço o check-in?", "Na tela Check-in, gere o QR Code da sua aula agendada e apresente ao instrutor."],
+      ["Esqueci minha senha. E agora?", "Na tela de login, clique em Esqueci minha senha e siga as instruções."]
     ],
     instructor: [
-      ["Como faco a chamada?", "Abra sua modalidade, encontre a aula do dia e marque cada aluno como presente ou ausente."],
-      ["Quando recebo meu pagamento?", "No fim do mes, pelas aulas dadas. Quem paga e a academia onde voce trabalha."],
-      ["Posso me cadastrar sozinho?", "Nao. O e-mail de instrutor e criado apenas pela academia."]
+      ["Como faço a chamada?", "Abra sua modalidade, encontre a aula do dia e marque cada aluno como presente ou ausente."],
+      ["Quando recebo meu pagamento?", "No fim do mês, pelas aulas dadas. Quem paga é a academia onde você trabalha."],
+      ["Posso me cadastrar sozinho?", "Não. O e-mail de instrutor é criado apenas pela academia."]
     ],
     institution_admin: [
-      ["Como crio uma modalidade ou turma?", "Em Modalidades, crie a turma e escolha o instrutor responsavel. So ele faz a chamada dela."],
-      ["Como cadastro um instrutor?", "Somente a academia cria o e-mail do instrutor, pela area de gestao."],
+      ["Como crio uma modalidade ou turma?", "Em Modalidades, crie a turma e escolha o instrutor responsável. Só ele faz a chamada dela."],
+      ["Como cadastro um instrutor?", "Somente a academia cria o e-mail do instrutor, pela área de gestão."],
       ["Como vejo meu financeiro?", "Na tela Financeiro, com o repasse e a taxa da plataforma."]
     ],
     platform_admin: [
-      ["Como respondo um chamado?", "Abra o chamado, escreva a resposta, escolha o status e salve. O usuario ve a resposta na propria conta."],
-      ["Como altero o valor de um plano?", "Em Planos, clique em Editar. Marque a opcao de aplicar a todos para atualizar tambem quem ja usa o plano."]
+      ["Como respondo um chamado?", "Abra o chamado, escreva a resposta, escolha o status e salve. O usuário vê a resposta na própria conta."],
+      ["Como altero o valor de um plano?", "Em Planos, clique em Editar. Marque a opção de aplicar a todos para atualizar também quem já usa o plano."]
     ]
   };
 
@@ -67,7 +67,7 @@
   }
 
   function kindOfTab() {
-    return tab === "ajuda" ? "ajuda" : "reclamacao";
+    return tab === "ajuda" ? "ajuda" : "reclamação";
   }
 
   function renderTabs() {
@@ -76,8 +76,8 @@
     ).join("");
     $("#support-title").textContent = tab === "ajuda" ? "Ajuda" : "Reclame aqui";
     $("#support-subtitle").textContent = tab === "ajuda"
-      ? "Tire duvidas ou peca auxilio ao time do FightPass."
-      : "Conte o que deu errado. O FightPass le e responde cada reclamacao.";
+      ? "Tire dúvidas ou peça auxílio ao time do FightPass."
+      : "Conte o que deu errado. O FightPass le e responde cada reclamação.";
   }
 
   // ---------- usuario comum ----------
@@ -102,19 +102,19 @@
     $("#support-content").innerHTML = `
       ${kind === "ajuda" ? `<section class="card-white" style="margin-top:20px;"><h2>Perguntas frequentes</h2>${faq}</section>` : ""}
       <section class="card-white" style="margin-top:20px;">
-        <h2>${kind === "ajuda" ? "Pedir ajuda" : "Nova reclamacao"}</h2>
+        <h2>${kind === "ajuda" ? "Pedir ajuda" : "Nova reclamação"}</h2>
         <form id="support-form">
           <div class="input-group">
             <label for="support-category">Assunto relacionado</label>
             <select id="support-category" class="input-field">${CATEGORIES.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select>
           </div>
           <div class="input-group">
-            <label for="support-subject">Titulo</label>
+            <label for="support-subject">Título</label>
             <input id="support-subject" class="input-field" maxlength="150" required placeholder="Resuma em poucas palavras">
           </div>
           <div class="input-group">
             <label for="support-text">Mensagem</label>
-            <textarea id="support-text" class="input-field" rows="5" maxlength="2000" required placeholder="Explique com detalhes (minimo de 10 caracteres)"></textarea>
+            <textarea id="support-text" class="input-field" rows="5" maxlength="2000" required placeholder="Explique com detalhes (mínimo de 10 caracteres)"></textarea>
           </div>
           <button type="submit" class="btn-primary" style="width:auto; padding:12px 32px;">Enviar</button>
         </form>
@@ -138,7 +138,7 @@
           }
         });
         event.target.reset();
-        showMessage("Enviado! Voce acompanha a resposta aqui, em Meus chamados.", "success");
+        showMessage("Enviado! Você acompanha a resposta aqui, em Meus chamados.", "success");
         loadMine();
       } catch (error) {
         showMessage(error.message, "error");

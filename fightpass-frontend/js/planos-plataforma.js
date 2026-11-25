@@ -28,7 +28,7 @@
     if (value === null || value === undefined || value === "") return key === "session_limit" ? "Ilimitado" : "-";
     if (/cents$/.test(key)) return money(value);
     if (typeof value === "boolean" || value === 0 || value === 1) {
-      if (/^(is_|has_)/.test(key)) return value ? "Sim" : "Nao";
+      if (/^(is_|has_)/.test(key)) return value ? "Sim" : "Não";
     }
     return value;
   }
@@ -80,12 +80,12 @@
         <p class="muted-note">O novo valor e os novos requisitos passam a valer para todos.</p>
         <form id="plan-form">
           <div class="input-group"><label>Nome</label><input name="name" class="input-field" maxlength="100" required value="${esc(plan.name)}"></div>
-          <div class="input-group"><label>Descricao</label><input name="description" class="input-field" maxlength="255" required value="${esc(plan.description)}"></div>
+          <div class="input-group"><label>Descrição</label><input name="description" class="input-field" maxlength="255" required value="${esc(plan.description)}"></div>
           <div class="input-group"><label>Valor (R$)</label><input name="price" class="input-field" inputmode="decimal" required value="${esc((Number(plan.price_cents) / 100).toFixed(2).replace(".", ","))}"></div>
           ${kind === "student" ? `<div class="input-group"><label>Quantidade de treinos (vazio = ilimitado)</label><input name="sessionLimit" class="input-field" inputmode="numeric" value="${esc(plan.session_limit ?? "")}"></div>` : ""}
           <div class="input-group"><label>Validade (dias)</label><input name="durationDays" class="input-field" inputmode="numeric" required value="${esc(plan.duration_days)}"></div>
-          <label class="inline-check"><input type="checkbox" name="isActive" ${plan.is_active ? "checked" : ""}><span>Plano ativo (aparece para contratacao)</span></label>
-          <label class="inline-check"><input type="checkbox" name="applyToActive" checked><span>${kind === "student" ? "Aplicar tambem a quem ja usa este plano (treinos)" : "Aplicar o novo valor as mensalidades das academias"}</span></label>
+          <label class="inline-check"><input type="checkbox" name="isActive" ${plan.is_active ? "checked" : ""}><span>Plano ativo (aparece para contratação)</span></label>
+          <label class="inline-check"><input type="checkbox" name="applyToActive" checked><span>${kind === "student" ? "Aplicar também a quem já usa este plano (treinos)" : "Aplicar o novo valor as mensalidades das academias"}</span></label>
           <div id="plan-form-message" class="state-message error" hidden></div>
           <div class="button-row" style="margin-top:16px;">
             <button type="submit" class="btn-primary" style="width:auto; padding:12px 32px;">Atualizar plano</button>
@@ -108,7 +108,7 @@
       const normalizedPrice = rawPrice.includes(",") ? rawPrice.replace(/\./g, "").replace(",", ".") : rawPrice;
       const price = Math.round(parseFloat(normalizedPrice) * 100);
       if (!Number.isFinite(price) || price < 0) {
-        box.textContent = "Valor invalido.";
+        box.textContent = "Valor inválido.";
         box.hidden = false;
         return;
       }

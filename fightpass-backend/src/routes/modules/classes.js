@@ -36,7 +36,7 @@ async function findClassForManagement(classId) {
   );
 
   if (!rows[0]) {
-    throw new ApiError(404, "Turma nao encontrada");
+    throw new ApiError(404, "Turma não encontrada");
   }
 
   return rows[0];
@@ -102,7 +102,7 @@ router.get(
     );
     const classData = rows[0];
     if (!classData) {
-      throw new ApiError(404, "Turma nao encontrada");
+      throw new ApiError(404, "Turma não encontrada");
     }
 
     classData.schedules = await db.query(
@@ -120,15 +120,15 @@ router.post(
   "/",
   auth(["institution_admin"]),
   [
-    body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("modalityId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Modalidade invalida"),
+    body("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida"),
+    body("modalityId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Modalidade inválida"),
     body("modalityName").optional({ nullable: true }).trim().isLength({ max: 100 }).withMessage("Nome da modalidade muito longo"),
-    body("instructorId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Instrutor invalido"),
-    body("title").trim().notEmpty().withMessage("Titulo obrigatorio"),
-    body("dayOfWeek").isInt({ min: 0, max: 6 }).withMessage("Dia da semana invalido"),
-    body("startTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horario inicial invalido"),
-    body("endTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horario final invalido"),
-    body("capacity").isInt({ min: 1 }).withMessage("Capacidade invalida")
+    body("instructorId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Instrutor inválido"),
+    body("title").trim().notEmpty().withMessage("Título obrigatório"),
+    body("dayOfWeek").isInt({ min: 0, max: 6 }).withMessage("Dia da semana inválido"),
+    body("startTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horário inicial inválido"),
+    body("endTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horário final inválido"),
+    body("capacity").isInt({ min: 1 }).withMessage("Capacidade inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -148,7 +148,7 @@ router.post(
     const endTime = normalizeTime(req.body.endTime);
 
     if (startTime >= endTime) {
-      throw new ApiError(400, "Horario final deve ser posterior ao horario inicial");
+      throw new ApiError(400, "Horário final deve ser posterior ao horário inicial");
     }
     assertTrainingHours(startTime, endTime);
 
@@ -207,13 +207,13 @@ router.put(
   "/:id",
   auth(["institution_admin"]),
   [
-    param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
-    body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
-    body("instructorId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Instrutor invalido"),
-    body("title").trim().notEmpty().withMessage("Titulo obrigatorio"),
+    param("id").isInt({ min: 1 }).withMessage("Turma inválida"),
+    body("modalityId").isInt({ min: 1 }).withMessage("Modalidade inválida"),
+    body("instructorId").optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage("Instrutor inválido"),
+    body("title").trim().notEmpty().withMessage("Título obrigatório"),
     body("description").optional({ nullable: true }).trim(),
-    body("capacity").isInt({ min: 1 }).withMessage("Capacidade invalida"),
-    body("status").optional().isIn(["active", "inactive"]).withMessage("Status invalido")
+    body("capacity").isInt({ min: 1 }).withMessage("Capacidade inválida"),
+    body("status").optional().isIn(["active", "inactive"]).withMessage("Status inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -261,8 +261,8 @@ router.patch(
   "/:id/status",
   auth(["institution_admin"]),
   [
-    param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
-    body("status").isIn(["active", "inactive"]).withMessage("Status invalido")
+    param("id").isInt({ min: 1 }).withMessage("Turma inválida"),
+    body("status").isIn(["active", "inactive"]).withMessage("Status inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -284,10 +284,10 @@ router.post(
   "/:id/schedules",
   auth(["institution_admin"]),
   [
-    param("id").isInt({ min: 1 }).withMessage("Turma invalida"),
-    body("dayOfWeek").isInt({ min: 0, max: 6 }).withMessage("Dia da semana invalido"),
-    body("startTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horario inicial invalido"),
-    body("endTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horario final invalido"),
+    param("id").isInt({ min: 1 }).withMessage("Turma inválida"),
+    body("dayOfWeek").isInt({ min: 0, max: 6 }).withMessage("Dia da semana inválido"),
+    body("startTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horário inicial inválido"),
+    body("endTime").matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/).withMessage("Horário final inválido"),
     body("roomName").optional({ nullable: true }).trim()
   ],
   validateRequest,
@@ -299,7 +299,7 @@ router.post(
     const startTime = normalizeTime(req.body.startTime);
     const endTime = normalizeTime(req.body.endTime);
     if (startTime >= endTime) {
-      throw new ApiError(400, "Horario final deve ser posterior ao horario inicial");
+      throw new ApiError(400, "Horário final deve ser posterior ao horário inicial");
     }
     assertTrainingHours(startTime, endTime);
 
@@ -319,7 +319,7 @@ router.post(
       startTime,
       endTime,
       roomName: req.body.roomName || null
-    }, "Horario criado com sucesso");
+    }, "Horário criado com sucesso");
   })
 );
 

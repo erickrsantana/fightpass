@@ -42,7 +42,7 @@ async function ensureInstitutionAccess(userId, institutionId, allowedRoles = ["i
   );
 
   if (!rows[0]) {
-    throw new ApiError(403, "Usuario sem permissao para esta instituicao");
+    throw new ApiError(403, "Usuário sem permissão para esta instituição");
   }
 
   return rows[0];
@@ -61,7 +61,7 @@ async function ensureStudentInInstitution(studentId, institutionId) {
   );
 
   if (!rows[0]) {
-    throw new ApiError(403, "Aluno nao pertence a instituicao informada");
+    throw new ApiError(403, "Aluno não pertence a instituição informada");
   }
 
   return rows[0];
@@ -83,7 +83,7 @@ async function findSharedInstitution(studentId, evaluatorUserId) {
   );
 
   if (!rows[0]) {
-    throw new ApiError(403, "Usuario sem permissao para acessar este aluno");
+    throw new ApiError(403, "Usuário sem permissão para acessar este aluno");
   }
 
   return rows[0].institution_id;
@@ -99,7 +99,7 @@ async function ensureInstitutionModality(institutionId, modalityId) {
   );
 
   if (!rows[0]) {
-    throw new ApiError(400, "Modalidade nao vinculada a instituicao");
+    throw new ApiError(400, "Modalidade não vinculada a instituição");
   }
 }
 
@@ -114,7 +114,7 @@ async function ensureInstitutionInstructor(institutionId, instructorId) {
     [institutionId, instructorId]
   );
   if (!rows[0]) {
-    throw new ApiError(400, "Instrutor invalido para esta instituicao");
+    throw new ApiError(400, "Instrutor inválido para esta instituição");
   }
 }
 

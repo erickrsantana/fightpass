@@ -42,7 +42,7 @@
     realized: "Aula realizada",
     forecast: "Previsto",
     absent: "Aluno ausente",
-    no_checkin: "Sem presenca registrada"
+    no_checkin: "Sem presença registrada"
   };
 
   async function init() {
@@ -51,7 +51,7 @@
 
     const institutionId = api.firstInstitutionId(user);
     if (!institutionId) {
-      setMessage("Este usuario nao esta vinculado a uma instituicao ativa.", "error");
+      setMessage("Este usuário não está vinculado a uma instituição ativa.", "error");
       return;
     }
 
@@ -68,14 +68,14 @@
       const valueStyle = "font-size: 24px; font-weight: 700; margin-top: 5px;";
       cards.innerHTML = `
         <div class="card-white" style="${cardStyle}">
-          <span style="${labelStyle}">Voce vai receber</span>
+          <span style="${labelStyle}">Você vai receber</span>
           <div style="${valueStyle} color: #10B981;">${formatCurrency(totals.realizedNetCents)}</div>
           <small style="color:#64748B;">${totals.realizedLessons} aula(s) realizada(s)</small>
         </div>
         <div class="card-white" style="${cardStyle}">
           <span style="${labelStyle}">Previsto (aulas agendadas)</span>
           <div style="${valueStyle} color: #3B82F6;">${formatCurrency(totals.forecastNetCents)}</div>
-          <small style="color:#64748B;">${totals.forecastLessons} aula(s) ainda nao realizada(s)</small>
+          <small style="color:#64748B;">${totals.forecastLessons} aula(s) ainda não realizada(s)</small>
         </div>
         <div class="card-white" style="${cardStyle}">
           <span style="${labelStyle}">Valor bruto das aulas</span>
@@ -90,7 +90,7 @@
       `;
 
       payout.textContent = `Repasse previsto para ${dateLabel(data.payoutDate)}`;
-      note.textContent = `Cada aluno paga um plano FightPass. O valor de cada aula e o preco do plano dividido pelo numero de treinos dele. Quando o aluno treina na sua academia e a presenca e registrada, esse valor entra para voce, ja descontada a taxa de ${data.feePercent}% do FightPass. Aulas agendadas e ainda nao realizadas aparecem como previsto.`;
+      note.textContent = `Cada aluno paga um plano FightPass. O valor de cada aula é o preço do plano dividido pelo número de treinos dele. Quando o aluno treina na sua academia e a presença é registrada, esse valor entra para você, já descontada a taxa de ${data.feePercent}% do FightPass. Aulas agendadas e ainda não realizadas aparecem como previsto.`;
 
       table.innerHTML = data.entries.length ? data.entries.map((entry) => `
         <tr>
@@ -103,7 +103,7 @@
           <td><strong>${formatCurrency(entry.netCents)}</strong></td>
           <td>${html(statusLabels[entry.status] || entry.status)}</td>
         </tr>
-      `).join("") : `<tr><td colspan="8">Nenhum lancamento neste mes.</td></tr>`;
+      `).join("") : `<tr><td colspan="8">Nenhum lançamento neste mês.</td></tr>`;
     }
 
     async function load() {

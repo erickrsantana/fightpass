@@ -35,7 +35,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const profile = await findProfileById(req.user.sub);
     if (!profile) {
-      throw new ApiError(404, "Perfil nao encontrado");
+      throw new ApiError(404, "Perfil não encontrado");
     }
     return success(res, profile, "Perfil carregado com sucesso");
   })
@@ -45,9 +45,9 @@ router.put(
   "/",
   auth(),
   [
-    body("name").optional().trim().isLength({ min: 3 }).withMessage("Nome invalido"),
-    body("phone").optional().trim().isLength({ min: 10 }).withMessage("Telefone invalido"),
-    body("document").optional().trim().isLength({ min: 11 }).withMessage("Documento invalido"),
+    body("name").optional().trim().isLength({ min: 3 }).withMessage("Nome inválido"),
+    body("phone").optional().trim().isLength({ min: 10 }).withMessage("Telefone inválido"),
+    body("document").optional().trim().isLength({ min: 11 }).withMessage("Documento inválido"),
     body("avatarUrl")
       .optional({ checkFalsy: true })
       .custom((value) => {
@@ -57,7 +57,7 @@ router.put(
         if (isImageData) return text.length <= 600000;
         return isLink && text.length <= 500;
       })
-      .withMessage("Foto invalida ou muito grande")
+      .withMessage("Foto inválida ou muito grande")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -68,7 +68,7 @@ router.put(
       );
 
       if (duplicate[0]) {
-        throw new ApiError(409, "CPF/CNPJ ja cadastrado");
+        throw new ApiError(409, "CPF/CNPJ já cadastrado");
       }
     }
 
@@ -100,27 +100,27 @@ router.put(
   "/password",
   auth(),
   [
-    body("currentPassword").notEmpty().withMessage("Senha atual obrigatoria"),
+    body("currentPassword").notEmpty().withMessage("Senha atual obrigatória"),
     body("newPassword")
-      .isLength({ min: 8 }).withMessage("A nova senha deve ter no minimo 8 caracteres")
-      .matches(/[A-Z]/).withMessage("A nova senha deve conter letra maiuscula")
-      .matches(/[a-z]/).withMessage("A nova senha deve conter letra minuscula")
-      .matches(/[0-9]/).withMessage("A nova senha deve conter numero"),
+      .isLength({ min: 8 }).withMessage("A nova senha deve ter no mínimo 8 caracteres")
+      .matches(/[A-Z]/).withMessage("A nova senha deve conter letra maiúscula")
+      .matches(/[a-z]/).withMessage("A nova senha deve conter letra minúscula")
+      .matches(/[0-9]/).withMessage("A nova senha deve conter número"),
     body("confirmPassword")
       .custom((value, { req }) => value === req.body.newPassword)
-      .withMessage("A confirmacao deve ser igual a nova senha")
+      .withMessage("A confirmação deve ser igual a nova senha")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
     const rows = await db.query("SELECT password_hash FROM users WHERE id = ? LIMIT 1", [req.user.sub]);
     const user = rows[0];
     if (!user) {
-      throw new ApiError(404, "Usuario nao encontrado");
+      throw new ApiError(404, "Usuário não encontrado");
     }
 
     const matches = await comparePassword(req.body.currentPassword, user.password_hash);
     if (!matches) {
-      throw new ApiError(400, "Senha atual invalida");
+      throw new ApiError(400, "Senha atual inválida");
     }
 
     const passwordHash = await hashPassword(req.body.newPassword);

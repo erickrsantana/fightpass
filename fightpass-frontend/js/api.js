@@ -62,8 +62,8 @@
     return {
       female: "Feminino",
       male: "Masculino",
-      non_binary: "Nao binario",
-      prefer_not_to_say: "Prefiro nao informar",
+      non_binary: "Não binário",
+      prefer_not_to_say: "Prefiro não informar",
       other: "Outro"
     }[gender] || "-";
   }
@@ -72,9 +72,9 @@
     return {
       pix: "Pix",
       boleto: "Boleto",
-      credit_card: "Cartao de credito",
-      debit_card: "Cartao de debito",
-      transfer: "Transferencia"
+      credit_card: "Cartão de crédito",
+      debit_card: "Cartão de débito",
+      transfer: "Transferência"
     }[method] || method || "-";
   }
 
@@ -134,7 +134,7 @@
 
   async function request(path, options = {}) {
     if (!API_BASE_URL) {
-      throw new Error("API nao configurada. Defina FIGHTPASS_API_BASE_URL na Vercel e faca um novo deploy.");
+      throw new Error("API não configurada. Defina FIGHTPASS_API_BASE_URL na Vercel e faça um novo deploy.");
     }
 
     const headers = new Headers(options.headers || {});

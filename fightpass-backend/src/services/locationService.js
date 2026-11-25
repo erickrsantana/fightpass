@@ -9,7 +9,7 @@ function onlyDigits(value) {
 function normalizeZipCode(value) {
   const digits = onlyDigits(value);
   if (digits.length !== 8) {
-    throw new ApiError(422, "CEP invalido");
+    throw new ApiError(422, "CEP inválido");
   }
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
@@ -79,7 +79,7 @@ async function findAddressByCep(zipCode) {
   const digits = onlyDigits(zipCode);
   const data = await fetchJson(`https://viacep.com.br/ws/${digits}/json/`);
   if (data.erro) {
-    throw new ApiError(404, "CEP nao encontrado");
+    throw new ApiError(404, "CEP não encontrado");
   }
 
   const address = {
@@ -174,7 +174,7 @@ async function nominatimSearch(params) {
   });
   const data = await fetchJson(`${env.location.openStreetMapGeocodingUrl}?${search.toString()}`, {
     headers: {
-      "User-Agent": `${env.appName}/1.0 (prototipo academico FightPass; https://fightpassfinal.vercel.app)`,
+      "User-Agent": `${env.appName}/1.0 (protótipo acadêmico FightPass; https://fightpassfinal.vercel.app)`,
       "Accept-Language": "pt-BR"
     }
   });

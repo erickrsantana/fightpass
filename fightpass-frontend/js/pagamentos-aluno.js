@@ -3,7 +3,7 @@
   const $ = (s) => document.querySelector(s);
   const html = (v) => String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   const money = (c) => (Number(c || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const METHODS = { pix: "Pix", boleto: "Boleto", credit_card: "Credito", debit_card: "Debito", transfer: "Transferencia" };
+  const METHODS = { pix: "Pix", boleto: "Boleto", credit_card: "Crédito", debit_card: "Débito", transfer: "Transferência" };
   const STATUS = {
     paid: ["Pago", "tag-ok"], pending: ["Pendente", "tag-neutral"],
     cancelled: ["Cancelado", "tag-bad"], canceled: ["Cancelado", "tag-bad"],
@@ -17,9 +17,9 @@
     const gw = new URLSearchParams(window.location.search).get("gateway");
     if (gw) {
       const texts = {
-        success: ["Pagamento recebido! A confirmacao pode levar alguns instantes; atualize a pagina se ainda estiver pendente.", "success"],
-        pending: ["Pagamento pendente. Assim que o Mercado Pago confirmar, seu acesso sera liberado.", "info"],
-        failure: ["O pagamento nao foi concluido. Voce pode tentar novamente em Planos.", "error"]
+        success: ["Pagamento recebido! A confirmação pode levar alguns instantes; atualize a página se ainda estiver pendente.", "success"],
+        pending: ["Pagamento pendente. Assim que o Mercado Pago confirmar, seu acesso será liberado.", "info"],
+        failure: ["O pagamento não foi concluído. Você pode tentar novamente em Planos.", "error"]
       };
       const t = texts[gw];
       if (t) { message.hidden = false; message.className = `state-message ${t[1]}`; message.textContent = t[0]; }
@@ -44,7 +44,7 @@
           <td><span class="tag ${css}">${html(label)}</span></td>
           <td>${p.status === "paid" ? `<a href="comprovante?id=${p.id}">Comprovante</a>` : ""}</td>
         </tr>`;
-      }).join("") : `<tr><td colspan="6" class="muted-note">Voce ainda nao fez nenhum pagamento. <a href="planos.html">Ver planos</a></td></tr>`;
+      }).join("") : `<tr><td colspan="6" class="muted-note">Você ainda não fez nenhum pagamento. <a href="planos.html">Ver planos</a></td></tr>`;
     } catch (error) {
       message.hidden = false;
       message.className = "state-message error";

@@ -23,7 +23,7 @@ function parseMonth(value) {
   const reference = value && /^\d{4}-\d{2}$/.test(value) ? value : todayDateOnly().slice(0, 7);
   const [year, month] = reference.split("-").map(Number);
   if (month < 1 || month > 12) {
-    throw new ApiError(422, "Mes invalido. Use o formato AAAA-MM");
+    throw new ApiError(422, "Mês inválido. Use o formato AAAA-MM");
   }
   const lastDay = new Date(year, month, 0).getDate();
   const nextYear = month === 12 ? year + 1 : year;

@@ -73,7 +73,7 @@
 
   function renderList(users) {
     if (!users.length) {
-      $("#users-list").innerHTML = `<div class="empty-state">Nenhum usuario encontrado.</div>`;
+      $("#users-list").innerHTML = `<div class="empty-state">Nenhum usuário encontrado.</div>`;
       $("#users-count").textContent = "";
       return;
     }
@@ -95,7 +95,7 @@
           `).join("")}
         </tbody>
       </table>`;
-    $("#users-count").textContent = `${users.length} usuario(s) exibido(s). Clique em uma linha para abrir a ficha.`;
+    $("#users-count").textContent = `${users.length} usuário(s) exibido(s). Clique em uma linha para abrir a ficha.`;
   }
 
   async function loadUsers() {
@@ -161,7 +161,7 @@
       html += section("Resumo", `
         <div class="ficha-grid">
           <div><small>Aulas agendadas</small><strong>${s.bookings}</strong></div>
-          <div><small>Presencas</small><strong>${s.present}</strong></div>
+          <div><small>Presenças</small><strong>${s.present}</strong></div>
         </div>`);
       html += section("Planos contratados", miniTable(
         ["Plano", "Origem", "Status", "Validade", "Treinos"],
@@ -170,26 +170,26 @@
         "Nenhum plano."
       ));
       html += section("Pagamentos", miniTable(
-        ["Plano", "Metodo", "Valor", "Multa", "Status", "Data"],
+        ["Plano", "Método", "Valor", "Multa", "Status", "Data"],
         data.payments.map((p) => [esc(p.plan_name), esc(api.paymentMethodLabel ? api.paymentMethodLabel(p.method) : p.method), money(p.amount_cents),
           p.penalty_cents ? money(p.penalty_cents) : "-", statusTag(p.status), esc(api.formatDate(p.paid_at || p.created_at))]),
         "Nenhum pagamento."
       ));
-      html += section("Matriculas", miniTable(
+      html += section("Matrículas", miniTable(
         ["Academia", "Modalidade", "Status", "Desde"],
         data.enrollments.map((e) => [esc(e.institution_name), esc(e.modality_name), statusTag(e.status), esc(api.formatDate(e.started_at))]),
-        "Nenhuma matricula."
+        "Nenhuma matrícula."
       ));
-      html += section("Ultimas aulas", miniTable(
-        ["Data", "Aula", "Academia", "Agendamento", "Presenca"],
+      html += section("Últimas aulas", miniTable(
+        ["Data", "Aula", "Academia", "Agendamento", "Presença"],
         data.bookings.map((b) => [esc(api.formatDate(b.booking_date)), esc(b.title || b.modality_name), esc(b.institution_name), statusTag(b.status),
           b.attendance_status ? statusTag(b.attendance_status) : "-"]),
         "Nenhuma aula agendada."
       ));
-      html += section("Avaliacoes", miniTable(
-        ["Data", "Academia", "Modalidade", "Nota", "Comentario"],
+      html += section("Avaliações", miniTable(
+        ["Data", "Academia", "Modalidade", "Nota", "Comentário"],
         data.evaluations.map((v) => [esc(api.formatDate(v.created_at)), esc(v.institution_name), esc(v.modality_name), esc(v.score), esc(v.comment || "-")]),
-        "Nenhuma avaliacao."
+        "Nenhuma avaliação."
       ));
     }
     return html;

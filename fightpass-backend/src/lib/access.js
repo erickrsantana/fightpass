@@ -48,7 +48,7 @@ async function createTrialAccess({ userId, document }, connection) {
   const documentDigits = onlyDigits(document);
   const trialPlan = await getPlanByCode("trial_1_day", connection);
   if (!trialPlan) {
-    throw new ApiError(500, "Plano de teste nao configurado");
+    throw new ApiError(500, "Plano de teste não configurado");
   }
 
   const [trialRows] = await connection.execute(
@@ -57,7 +57,7 @@ async function createTrialAccess({ userId, document }, connection) {
   );
 
   if (trialRows[0]) {
-    throw new ApiError(409, "Este CPF ja utilizou o plano de teste");
+    throw new ApiError(409, "Este CPF já utilizou o plano de teste");
   }
 
   const [passResult] = await connection.execute(
@@ -122,7 +122,7 @@ async function ensureStudentAccess(studentId, requiredSessions = 1, connection =
   if (!pass) {
     throw new ApiError(
       402,
-      "Seu periodo de teste terminou ou seu plano nao possui treinos disponiveis. Contrate um plano para continuar usando o FightPass."
+      "Seu período de teste terminou ou seu plano não possui treinos disponíveis. Contrate um plano para continuar usando o FightPass."
     );
   }
   return pass;

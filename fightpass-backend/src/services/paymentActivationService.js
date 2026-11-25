@@ -27,27 +27,27 @@ async function activateStudentPayment({ paymentId, studentId = null, gateway = f
     );
 
     const payment = paymentRows[0];
-    if (!payment) throw new ApiError(404, "Cobranca nao encontrada");
+    if (!payment) throw new ApiError(404, "Cobrança não encontrada");
 
     if (!gateway && payment.method === "gateway") {
-      throw new ApiError(403, "Esta cobranca so e confirmada pelo gateway de pagamento");
+      throw new ApiError(403, "Esta cobrança só é confirmada pelo gateway de pagamento");
     }
     if (payment.status === "paid") {
       if (gateway) { await connection.commit(); return { paymentId: payment.id, alreadyPaid: true }; }
-      throw new ApiError(409, "Cobranca ja confirmada");
+      throw new ApiError(409, "Cobrança já confirmada");
     }
     // Gateway: aceita tambem cobranca cancelada na tela (o cliente pode ter pago depois de cancelar).
     if (payment.status !== "pending" && !(gateway && payment.status === "cancelled")) {
-      throw new ApiError(409, "Cobranca nao esta pendente");
+      throw new ApiError(409, "Cobrança não está pendente");
     }
 
     if (!gateway && payment.expires_at && new Date(payment.expires_at) < new Date()) {
       await connection.execute("UPDATE payment_simulations SET status = 'cancelled' WHERE id = ?", [payment.id]);
       await connection.commit();
-      throw new ApiError(410, "Cobranca expirada. Gere uma nova para continuar.");
+      throw new ApiError(410, "Cobrança expirada. Gere uma nova para continuar.");
     }
     if (!payment.terms_acceptance_id) {
-      throw new ApiError(422, "Termos de Uso nao foram aceitos para esta contratacao");
+      throw new ApiError(422, "Termos de Uso não foram aceitos para esta contratação");
     }
 
     const [passResult] = await connection.execute(
@@ -107,7 +107,7 @@ async function processMercadoPagoPayment(mpPaymentId) {
 
   const rows = await db.query(`SELECT id, amount_cents, status, method FROM ${table} WHERE id = ? LIMIT 1`, [id]);
   const row = rows[0];
-  if (!row || row.method !== "gateway") return { ignored: "cobranca nao encontrada" };
+  if (!row || row.method !== "gateway") return { ignored: "cobrança não encontrada" };
 
   await db.query(`UPDATE ${table} SET gateway_status = ?, gateway_payment_id = COALESCE(gateway_payment_id, ?) WHERE id = ? AND status = 'pending'`, [
     String(mp.status || "").slice(0, 30), String(mp.id), id
@@ -117,7 +117,7 @@ async function processMercadoPagoPayment(mpPaymentId) {
     // Confere valor e moeda: impede liberar um plano de R$99 com um pagamento de R$1.
     const paidCents = Math.round(Number(mp.transaction_amount) * 100);
     if (mp.currency_id !== "BRL" || paidCents !== Number(row.amount_cents)) {
-      console.error(`[mercadopago] valor divergente na cobranca ${reference}: esperado ${row.amount_cents}, recebido ${paidCents} ${mp.currency_id}`);
+      console.error(`[mercadopago] valor divergente na cobrança ${reference}: esperado ${row.amount_cents}, recebido ${paidCents} ${mp.currency_id}`);
       return { ignored: "valor divergente" };
     }
     if (kind === "S") return activateStudentPayment({ paymentId: id, gateway: true, gatewayPaymentId: String(mp.id) });

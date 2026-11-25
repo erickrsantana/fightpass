@@ -12,7 +12,7 @@ router.get(
   auth(["institution_admin", "instructor"]),
   asyncHandler(async (req, res) => {
     const data = await resolveCep(req.params.cep, req.query.number || null, req.query.complement || null);
-    return success(res, data, "Localizacao carregada com sucesso");
+    return success(res, data, "Localização carregada com sucesso");
   })
 );
 
@@ -20,11 +20,11 @@ router.put(
   "/institutions/:id/address",
   auth(["institution_admin"]),
   [
-    body("zipCode").trim().notEmpty().withMessage("CEP obrigatorio"),
-    body("number").trim().notEmpty().withMessage("Numero obrigatorio"),
+    body("zipCode").trim().notEmpty().withMessage("CEP obrigatório"),
+    body("number").trim().notEmpty().withMessage("Número obrigatório"),
     body("complement").optional({ nullable: true }).trim(),
-    body("latitude").optional({ nullable: true, checkFalsy: true }).isFloat({ min: -90, max: 90 }).withMessage("Latitude invalida"),
-    body("longitude").optional({ nullable: true, checkFalsy: true }).isFloat({ min: -180, max: 180 }).withMessage("Longitude invalida")
+    body("latitude").optional({ nullable: true, checkFalsy: true }).isFloat({ min: -90, max: 90 }).withMessage("Latitude inválida"),
+    body("longitude").optional({ nullable: true, checkFalsy: true }).isFloat({ min: -180, max: 180 }).withMessage("Longitude inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -40,7 +40,7 @@ router.put(
       zipCode: address.zipCode,
       geocodingStatus: address.geocodingStatus
     });
-    return success(res, address, "Endereco atualizado com sucesso");
+    return success(res, address, "Endereço atualizado com sucesso");
   })
 );
 
@@ -59,8 +59,8 @@ router.get(
     query("modalities").optional().trim(),
     query("search").optional().trim(),
     query("near").optional().trim(),
-    query("lat").optional().isFloat({ min: -90, max: 90 }).withMessage("Latitude invalida"),
-    query("lng").optional().isFloat({ min: -180, max: 180 }).withMessage("Longitude invalida")
+    query("lat").optional().isFloat({ min: -90, max: 90 }).withMessage("Latitude inválida"),
+    query("lng").optional().isFloat({ min: -180, max: 180 }).withMessage("Longitude inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -135,7 +135,7 @@ router.get(
       [...distanceParams, ...params]
     );
 
-    return success(res, data, "Instituicoes carregadas com sucesso");
+    return success(res, data, "Instituições carregadas com sucesso");
   })
 );
 
@@ -148,7 +148,7 @@ router.get(
        LEFT JOIN addresses a ON a.institution_id = i.id
        ORDER BY i.name`
     );
-    return success(res, data, "Instituicoes carregadas com sucesso");
+    return success(res, data, "Instituições carregadas com sucesso");
   })
 );
 
@@ -167,7 +167,7 @@ router.get(
 
     const institution = rows[0];
     if (!institution) {
-      throw new ApiError(404, "Instituicao nao encontrada");
+      throw new ApiError(404, "Instituição não encontrada");
     }
 
     institution.modalities = await db.query(
@@ -191,7 +191,7 @@ router.get(
       [req.params.id]
     );
 
-    return success(res, institution, "Instituicao carregada com sucesso");
+    return success(res, institution, "Instituição carregada com sucesso");
   })
 );
 
@@ -228,7 +228,7 @@ router.get(
       [req.params.id]
     );
 
-    return success(res, data, "Alunos da instituicao carregados com sucesso");
+    return success(res, data, "Alunos da instituição carregados com sucesso");
   })
 );
 

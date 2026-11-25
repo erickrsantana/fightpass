@@ -121,7 +121,7 @@ function passwordResetTemplate({ name, resetUrl }) {
 async function sendPasswordResetEmail({ to, name, token }) {
   const resetUrl = buildPasswordResetUrl(token);
   if (!emailProvider() && process.env.NODE_ENV !== "production") {
-    console.log(`[email] (modo desenvolvimento) Link de redefinicao para ${to}: ${resetUrl}`);
+    console.log(`[email] (modo desenvolvimento) Link de redefinição para ${to}: ${resetUrl}`);
   }
   return deliver({
     to,
@@ -169,7 +169,7 @@ function verificationTemplate({ name, code, ttlMinutes, purpose }) {
 async function sendVerificationEmail({ to, name, code, purpose = "register" }) {
   const ttlMinutes = env.emailVerification.ttlMinutes;
   if (!emailProvider() && !env.isProduction) {
-    console.log(`[email] (modo desenvolvimento) Codigo de verificacao para ${to}: ${code}`);
+    console.log(`[email] (modo desenvolvimento) Código de verificação para ${to}: ${code}`);
   }
   const isLogin = purpose === "login";
   return deliver({

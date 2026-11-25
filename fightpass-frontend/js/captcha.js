@@ -39,7 +39,7 @@
       if (widgets.has(box)) return;
       var holder = document.createElement("div");
       holder.setAttribute("role", "group");
-      holder.setAttribute("aria-label", "Verificacao de seguranca (captcha)");
+      holder.setAttribute("aria-label", "Verificação de segurança (captcha)");
       box.appendChild(holder);
       widgets.set(box, window.hcaptcha.render(holder, { sitekey: c.siteKey, hl: "pt-BR" }));
     });
@@ -52,7 +52,7 @@
     var box = form.querySelector("[data-captcha]");
     var id = box ? widgets.get(box) : undefined;
     var token = id !== undefined && window.hcaptcha ? window.hcaptcha.getResponse(id) : "";
-    if (!token) throw new Error("Marque a caixa de verificacao (captcha) antes de continuar.");
+    if (!token) throw new Error("Marque a caixa de verificação (captcha) antes de continuar.");
     return token;
   }
 

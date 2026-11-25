@@ -5,7 +5,7 @@ const { auditLog } = require("../../lib/business");
 
 const router = express.Router();
 
-const KINDS = ["reclamacao", "ajuda"];
+const KINDS = ["reclamação", "ajuda"];
 const STATUSES = ["open", "in_progress", "resolved"];
 const CATEGORIES = ["academia", "instrutor", "plano", "pagamento", "aula", "aplicativo", "outro"];
 
@@ -19,7 +19,7 @@ router.post(
     const message = String(req.body.message || "").trim();
     const category = CATEGORIES.includes(req.body.category) ? req.body.category : "outro";
 
-    if (!KINDS.includes(kind)) throw new ApiError(422, "Tipo de chamado invalido");
+    if (!KINDS.includes(kind)) throw new ApiError(422, "Tipo de chamado inválido");
     if (subject.length < 3 || subject.length > 150) throw new ApiError(422, "O assunto deve ter de 3 a 150 caracteres");
     if (message.length < 10 || message.length > 2000) throw new ApiError(422, "A mensagem deve ter de 10 a 2000 caracteres");
 
@@ -84,11 +84,11 @@ router.put(
     const ticketId = Number(req.params.id);
     const status = String(req.body.status || "");
     const response = String(req.body.response || "").trim();
-    if (!STATUSES.includes(status)) throw new ApiError(422, "Status invalido");
+    if (!STATUSES.includes(status)) throw new ApiError(422, "Status inválido");
     if (response.length > 2000) throw new ApiError(422, "Resposta muito longa");
 
     const found = await db.query("SELECT id FROM support_tickets WHERE id = ? LIMIT 1", [ticketId]);
-    if (!found[0]) throw new ApiError(404, "Chamado nao encontrado");
+    if (!found[0]) throw new ApiError(404, "Chamado não encontrado");
 
     await db.query(
       `UPDATE support_tickets

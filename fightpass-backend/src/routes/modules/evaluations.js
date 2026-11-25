@@ -28,7 +28,7 @@ router.get(
       [req.params.id, institutionId]
     );
 
-    return success(res, data, "Avaliacoes carregadas com sucesso");
+    return success(res, data, "Avaliações carregadas com sucesso");
   })
 );
 
@@ -36,16 +36,16 @@ router.post(
   "/students/:id/evaluations",
   auth(["institution_admin"]),
   [
-    body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("modalityId").isInt({ min: 1 }).withMessage("Modalidade invalida"),
-    body("score").isFloat({ min: 0, max: 10 }).withMessage("Nota invalida"),
-    body("comment").optional().trim().isLength({ max: 1000 }).withMessage("Comentario muito longo")
+    body("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida"),
+    body("modalityId").isInt({ min: 1 }).withMessage("Modalidade inválida"),
+    body("score").isFloat({ min: 0, max: 10 }).withMessage("Nota inválida"),
+    body("comment").optional().trim().isLength({ max: 1000 }).withMessage("Comentário muito longo")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
     const studentRows = await db.query("SELECT id, name, email FROM users WHERE id = ? LIMIT 1", [req.params.id]);
     if (!studentRows[0]) {
-      throw new ApiError(404, "Aluno nao encontrado");
+      throw new ApiError(404, "Aluno não encontrado");
     }
 
     await ensureInstitutionAccess(req.user.sub, req.body.institutionId);
@@ -64,7 +64,7 @@ router.post(
       score: req.body.score
     });
 
-    return created(res, { id: result.insertId }, "Avaliacao registrada com sucesso");
+    return created(res, { id: result.insertId }, "Avaliação registrada com sucesso");
   })
 );
 
@@ -105,7 +105,7 @@ router.get(
 
     const profile = rows[0];
     if (!profile) {
-      throw new ApiError(404, "Aluno nao encontrado");
+      throw new ApiError(404, "Aluno não encontrado");
     }
 
     return success(res, profile, "Perfil do aluno carregado com sucesso");
@@ -125,7 +125,7 @@ router.get(
       [req.params.id, institutionId]
     );
 
-    return success(res, data, "Evolucao do aluno carregada com sucesso");
+    return success(res, data, "Evolução do aluno carregada com sucesso");
   })
 );
 

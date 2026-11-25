@@ -21,7 +21,7 @@ async function verifyCaptchaToken(token, ip) {
     const data = await res.json();
     return data.success === true;
   } catch (error) {
-    throw new ApiError(503, "Nao foi possivel validar o captcha agora. Tente novamente.");
+    throw new ApiError(503, "Não foi possível validar o captcha agora. Tente novamente.");
   } finally {
     clearTimeout(timer);
   }
@@ -32,7 +32,7 @@ async function captchaGuard(req, res, next) {
   try {
     if (!env.captcha.enabled) return next();
     const ok = await verifyCaptchaToken(req.body && req.body.captchaToken, req.ip);
-    if (!ok) throw new ApiError(400, "Confirme que voce nao e um robo e tente novamente.", { code: "CAPTCHA_FAILED" });
+    if (!ok) throw new ApiError(400, "Confirme que você não é um robô e tente novamente.", { code: "CAPTCHA_FAILED" });
     return next();
   } catch (error) {
     return next(error);

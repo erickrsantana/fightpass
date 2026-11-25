@@ -22,7 +22,7 @@
           </div>
         `).join("")}
       </div>
-      <small>Versao: ${html(terms.version)}</small>`;
+      <small>Versão: ${html(terms.version)}</small>`;
   }
 
   function createAcceptance(selector, options) {
@@ -131,7 +131,7 @@
         });
         overlay.remove();
       } catch (err) {
-        error.textContent = err.message || "Nao foi possivel registrar o aceite.";
+        error.textContent = err.message || "Não foi possível registrar o aceite.";
         error.hidden = false;
         button.disabled = false;
       }

@@ -143,15 +143,15 @@
     var tag = el.tagName.toLowerCase();
     var name = el.getAttribute("aria-label") || "";
     var text;
-    if (tag === "img") return "Imagem: " + (el.getAttribute("alt") || el.getAttribute("title") || "sem descricao");
+    if (tag === "img") return "Imagem: " + (el.getAttribute("alt") || el.getAttribute("title") || "sem descrição");
     if (tag === "input") {
       var type = (el.getAttribute("type") || "text").toLowerCase();
       var lab = name || labelFor(el) || el.getAttribute("placeholder") || el.getAttribute("name") || "";
-      if (type === "checkbox") return "Caixa de selecao: " + lab + ", " + (el.checked ? "marcada" : "desmarcada");
-      if (type === "radio") return "Opcao: " + lab + ", " + (el.checked ? "selecionada" : "nao selecionada");
-      if (type === "submit" || type === "button") return "Botao: " + (el.value || lab);
-      if (type === "password") return "Campo de senha: " + lab + ". O conteudo nao sera lido.";
-      return "Campo de texto: " + lab + (el.required ? ", obrigatorio" : "");
+      if (type === "checkbox") return "Caixa de seleção: " + lab + ", " + (el.checked ? "marcada" : "desmarcada");
+      if (type === "radio") return "Opção: " + lab + ", " + (el.checked ? "selecionada" : "não selecionada");
+      if (type === "submit" || type === "button") return "Botão: " + (el.value || lab);
+      if (type === "password") return "Campo de senha: " + lab + ". O conteúdo não será lido.";
+      return "Campo de texto: " + lab + (el.required ? ", obrigatório" : "");
     }
     if (tag === "select") {
       var opt = el.options[el.selectedIndex];
@@ -161,9 +161,9 @@
     text = (name || el.innerText || el.getAttribute("title") || "").replace(/\s+/g, " ").trim();
     if (!text) return "";
     if (text.length > 280) text = text.slice(0, 280) + "...";
-    if (tag === "button" || el.getAttribute("role") === "button") return "Botao: " + text;
+    if (tag === "button" || el.getAttribute("role") === "button") return "Botão: " + text;
     if (tag === "a") return "Link: " + text;
-    if (/^h[1-6]$/.test(tag)) return "Titulo: " + text;
+    if (/^h[1-6]$/.test(tag)) return "Título: " + text;
     return text;
   }
 
@@ -204,7 +204,7 @@
   function showVisualAlert(message, type) {
     if (!state.visualAlerts || !message) return;
     banner.className = "fp-" + (type || "info");
-    banner.textContent = (type === "error" ? "ATENCAO: " : type === "success" ? "OK: " : "AVISO: ") + message;
+    banner.textContent = (type === "error" ? "ATENÇÃO: " : type === "success" ? "OK: " : "AVISO: ") + message;
     banner.hidden = false;
     flash.classList.remove("on"); void flash.offsetWidth; flash.classList.add("on");
     try { if (navigator.vibrate) navigator.vibrate(type === "error" ? [200, 100, 200, 100, 200] : [120]); } catch (e) { /* sem vibracao */ }
@@ -271,7 +271,7 @@
   function buildPanel() {
     fab = document.createElement("button");
     fab.id = "fp-a11y-fab"; fab.type = "button";
-    fab.setAttribute("aria-label", "Acessibilidade. Abrir menu de recursos para cegos, surdos e daltonicos");
+    fab.setAttribute("aria-label", "Acessibilidade. Abrir menu de recursos para cegos, surdos e daltônicos");
     fab.setAttribute("aria-expanded", "false");
     fab.setAttribute("aria-controls", "fp-a11y-panel");
     fab.title = "Acessibilidade (Alt+A)";
@@ -283,23 +283,23 @@
     panel.innerHTML =
       "<h2>Acessibilidade</h2>" +
       "<small>Atalho: Alt + A. Esc fecha.</small>" +
-      "<h3>Visao (cegos e baixa visao)</h3>" +
-      row("fp-voice", "Leitor de voz", "Passe o mouse, toque ou use Tab em qualquer item para ouvir o que esta escrito.") +
+      "<h3>Visão (cegos e baixa visão)</h3>" +
+      row("fp-voice", "Leitor de voz", "Passe o mouse, toque ou use Tab em qualquer item para ouvir o que está escrito.") +
       '<label for="fp-rate" style="display:block;margin:4px 0">Velocidade da voz</label>' +
-      '<select id="fp-rate"><option value="0.8">Devagar</option><option value="1">Normal</option><option value="1.3">Rapida</option></select>' +
+      '<select id="fp-rate"><option value="0.8">Devagar</option><option value="1">Normal</option><option value="1.3">Rápida</option></select>' +
       '<div class="fp-btns" style="margin-top:8px"><button type="button" id="fp-font-minus" aria-label="Diminuir letras">A-</button><button type="button" id="fp-font-plus" aria-label="Aumentar letras">A+</button><span id="fp-font-val" aria-live="polite"></span></div>' +
       row("fp-contrast", "Alto contraste (fundo preto)") +
       row("fp-links", "Destacar links") +
-      "<h3>Audicao (surdos)</h3>" +
-      row("fp-visual", "Alertas visuais", "Faixa grande, piscada na tela e vibracao no celular para toda mensagem do sistema.") +
+      "<h3>Audição (surdos)</h3>" +
+      row("fp-visual", "Alertas visuais", "Faixa grande, piscada na tela e vibração no celular para toda mensagem do sistema.") +
       row("fp-libras", "Tradutor de Libras (VLibras)", "Abre o avatar que traduz o texto da tela para Libras.") +
       "<h3>Cores (daltonismo)</h3>" +
-      '<label for="fp-color" style="display:block;margin:4px 0">Filtro de correcao</label>' +
+      '<label for="fp-color" style="display:block;margin:4px 0">Filtro de correção</label>' +
       '<select id="fp-color"><option value="none">Nenhum</option><option value="protanopia">Protanopia (dificuldade com vermelho)</option><option value="deuteranopia">Deuteranopia (dificuldade com verde)</option><option value="tritanopia">Tritanopia (dificuldade com azul)</option><option value="acromatopsia">Acromatopsia (tons de cinza)</option></select>' +
-      row("fp-markers", "Marcar status alem da cor", "Adiciona simbolos (✔ ✖ ▲) e bordas em avisos, erros e situacoes.") +
+      row("fp-markers", "Marcar status além da cor", "Adiciona símbolos (✔ ✖ ▲) e bordas em avisos, erros e situações.") +
       "<h3>Movimento</h3>" +
-      row("fp-calm", "Reduzir animacoes") +
-      '<button type="button" id="fp-a11y-reset">Restaurar padrao</button>';
+      row("fp-calm", "Reduzir animações") +
+      '<button type="button" id="fp-a11y-reset">Restaurar padrão</button>';
 
     document.body.appendChild(fab);
     document.body.appendChild(panel);

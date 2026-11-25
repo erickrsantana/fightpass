@@ -14,9 +14,9 @@
     diamante: { color: "#4F46E5", soft: "#EEF2FF", icon: "💎" }
   };
   const METHODS = [
-    ["pix", "Pix"], ["boleto", "Boleto"], ["credit_card", "Cartao de credito"], ["debit_card", "Cartao de debito"]
+    ["pix", "Pix"], ["boleto", "Boleto"], ["credit_card", "Cartão de crédito"], ["debit_card", "Cartão de débito"]
   ];
-  const METHOD_NAMES = { pix: "Pix", boleto: "Boleto", credit_card: "Cartao de credito", debit_card: "Cartao de debito" };
+  const METHOD_NAMES = { pix: "Pix", boleto: "Boleto", credit_card: "Cartão de crédito", debit_card: "Cartão de débito" };
 
   function say(text, type, details) {
     const box = $("#plans-message");
@@ -92,7 +92,7 @@
           <div class="current-plan">
             <div>
               <h2>Mensalidade da academia</h2>
-              <p><strong>${html(state.plan_name || "Plano DOJO")}</strong> &middot; ${active ? `ativo ate ${api.formatDate(state.paid_until || state.next_billing_at)}` : '<span style="color:#991B1B;">sem plano ativo</span>'}</p>
+              <p><strong>${html(state.plan_name || "Plano DOJO")}</strong> &middot; ${active ? `ativo até ${api.formatDate(state.paid_until || state.next_billing_at)}` : '<span style="color:#991B1B;">sem plano ativo</span>'}</p>
               <small class="muted-note">${active ? "Sua academia pode criar e gerenciar aulas." : "Assine para criar e gerenciar aulas."}</small>
             </div>
             ${toggleA}
@@ -104,7 +104,7 @@
       if (!state.hasActiveAccess || !access) {
         currentAccess.innerHTML = `
           <div class="current-plan">
-            <div><h2>Seu plano</h2><p style="color:#991B1B;">Voce nao possui plano ativo.</p></div>
+            <div><h2>Seu plano</h2><p style="color:#991B1B;">Você não possui plano ativo.</p></div>
             ${toggle}
           </div>`;
         return;
@@ -118,7 +118,7 @@
         <div class="current-plan">
           <div>
             <h2>Seu plano</h2>
-            <p><strong>${html(planName)}</strong> &middot; valido ate ${api.formatDate(access.expires_at)}</p>
+            <p><strong>${html(planName)}</strong> &middot; válido até ${api.formatDate(access.expires_at)}</p>
             <div class="progress-bar" title="Treinos usados"><span style="width:${percent}%"></span></div>
             <small class="muted-note">${unlimited ? "Treinos ilimitados" : `${used} de ${total} treinos usados &middot; restam ${Math.max(0, total - used)}`}</small>
           </div>
@@ -126,7 +126,7 @@
         </div>
         ${open && feeCents() > 0 ? `
           <p class="fee-warning">
-            Trocar para outro plano enquanto este esta em uso gera uma multa de <strong>${money(feeCents())}</strong>
+            Trocar para outro plano enquanto este está em uso gera uma multa de <strong>${money(feeCents())}</strong>
             (${html(state.planChange.feePercent)}% do plano atual), cobrada junto com o novo plano.
           </p>` : ""}`;
     }
@@ -165,18 +165,18 @@
     function methodPanel() {
       if (payment) return paymentPanel();
       if (method === "pix") {
-        return `<p class="muted-note">Voce recebe um QR Code e um codigo Pix copia-e-cola, validos por 30 minutos.</p>`;
+        return `<p class="muted-note">Você recebe um QR Code e um código Pix copia-e-cola, válidos por 30 minutos.</p>`;
       }
       if (method === "boleto") {
-        return `<p class="muted-note">O boleto vence em 3 dias. A compensacao e simulada nesta demonstracao.</p>`;
+        return `<p class="muted-note">O boleto vence em 3 dias. A compensação é simulada nesta demonstração.</p>`;
       }
       const credit = method === "credit_card";
       const total = totalCents();
       return `
         <div class="card-form">
-          <div class="input-group"><label>Numero do cartao</label>
+          <div class="input-group"><label>Número do cartão</label>
             <div class="card-number-wrap"><input id="card-number" class="input-field" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000" maxlength="23"><span id="card-brand" class="card-brand"></span></div></div>
-          <div class="input-group"><label>Nome impresso no cartao</label><input id="card-holder" class="input-field" autocomplete="off" placeholder="COMO ESTA NO CARTAO"></div>
+          <div class="input-group"><label>Nome impresso no cartão</label><input id="card-holder" class="input-field" autocomplete="off" placeholder="COMO ESTA NO CARTÃO"></div>
           <div class="card-row">
             <div class="input-group"><label>Validade</label><input id="card-expiry" class="input-field" inputmode="numeric" placeholder="MM/AA" maxlength="5"></div>
             <div class="input-group"><label>CVV</label><input id="card-cvv" class="input-field" inputmode="numeric" placeholder="123" maxlength="4"></div>
@@ -185,7 +185,7 @@
             <select id="card-installments" class="input-field">
               ${[1, 2, 3].map((n) => `<option value="${n}">${n}x de ${money(Math.ceil(total / n))} sem juros</option>`).join("")}
             </select></div>` : ""}
-          <p class="muted-note">Demonstracao: use 4111 1111 1111 1111 para aprovar ou 4000 0000 0000 0002 para ver um pagamento recusado. O cartao e o CVV nao sao guardados.</p>
+          <p class="muted-note">Demonstração: use 4111 1111 1111 1111 para aprovar ou 4000 0000 0000 0002 para ver um pagamento recusado. O cartão e o CVV não são guardados.</p>
         </div>`;
     }
 
@@ -198,10 +198,10 @@
               <p><strong>Pague com Pix</strong></p>
               <p class="muted-note">Expira em <strong id="pay-countdown">--:--</strong></p>
               <div class="token-box" id="pix-code">${html(payment.pixCode)}</div>
-              <button type="button" class="btn-secondary" style="width:auto;padding:8px 16px;margin-top:8px;" data-copy="${html(payment.pixCode)}">Copiar codigo</button>
+              <button type="button" class="btn-secondary" style="width:auto;padding:8px 16px;margin-top:8px;" data-copy="${html(payment.pixCode)}">Copiar código</button>
             </div>
           </div>
-          <button type="button" class="btn-primary" style="width:auto;margin-top:16px;padding:12px 28px;" data-confirm-payment="${payment.id}">Ja paguei (simular)</button>`;
+          <button type="button" class="btn-primary" style="width:auto;margin-top:16px;padding:12px 28px;" data-confirm-payment="${payment.id}">Já paguei (simular)</button>`;
       }
       return `
         <div class="pay-box">
@@ -222,12 +222,12 @@
       checkout.innerHTML = `
         <div class="checkout-grid">
           <div>
-            <h2>Finalizar contratacao</h2>
+            <h2>Finalizar contratação</h2>
             ${payment || gatewayMode ? "" : `<div class="method-tabs">${METHODS.map(([value, label]) =>
               `<button type="button" class="method-tab${method === value ? " active" : ""}" data-method="${value}">${label}</button>`).join("")}</div>`}
-            <div id="method-panel">${gatewayMode ? `<p>Voce sera levado ao ambiente seguro do <strong>Mercado Pago</strong> para pagar com Pix, boleto ou cartao. Seus dados de cartao nao passam pelo FightPass.</p>` : methodPanel()}</div>
-            ${payment ? `<button type="button" class="btn-cancel" data-cancel-payment="${payment.id}" style="margin-top:12px;">Cancelar cobranca</button>` : `
-              <button type="button" class="btn-primary" id="pay-button" style="margin-top:18px;">${gatewayMode ? `Pagar ${money(totalCents())} com Mercado Pago` : method === "pix" || method === "boleto" ? "Gerar cobranca" : `Pagar ${money(totalCents())}`}</button>`}
+            <div id="method-panel">${gatewayMode ? `<p>Você será levado ao ambiente seguro do <strong>Mercado Pago</strong> para pagar com Pix, boleto ou cartão. Seus dados de cartão não passam pelo FightPass.</p>` : methodPanel()}</div>
+            ${payment ? `<button type="button" class="btn-cancel" data-cancel-payment="${payment.id}" style="margin-top:12px;">Cancelar cobrança</button>` : `
+              <button type="button" class="btn-primary" id="pay-button" style="margin-top:18px;">${gatewayMode ? `Pagar ${money(totalCents())} com Mercado Pago` : method === "pix" || method === "boleto" ? "Gerar cobrança" : `Pagar ${money(totalCents())}`}</button>`}
           </div>
           <aside class="order-summary">
             <h3>Resumo</h3>
@@ -309,7 +309,7 @@
         const response = await api.request(`${prefix}/checkout`, { method: "POST", body });
         const url = response.data.checkoutUrl;
         if (!/^https:\/\/([a-z0-9-]+\.)*mercadopago\.com(\.[a-z]{2})?\//i.test(url) && !/^https:\/\/([a-z0-9-]+\.)*mercadolibre\.com/i.test(url)) {
-          throw new Error("Endereco de pagamento invalido.");
+          throw new Error("Endereço de pagamento inválido.");
         }
         window.location.href = url;
       } catch (error) {
@@ -344,7 +344,7 @@
           await confirmPayment(payment.id);
           return;
         }
-        say("Cobranca gerada. Finalize o pagamento abaixo.", "success");
+        say("Cobrança gerada. Finalize o pagamento abaixo.", "success");
         renderCheckout();
       } catch (error) {
         say(error.message, "error", error.details);
@@ -377,7 +377,7 @@
           ${receipt ? `<p class="muted-note">Protocolo: <strong>${html(receipt.receipt_code)}</strong></p>` : ""}
           <div class="button-row" style="justify-content:center;margin-top:16px;">
             <a class="btn-primary" style="width:auto;padding:12px 24px;display:inline-block;" href="comprovante?id=${paymentId}">Ver comprovante</a>
-            <a class="btn-secondary" style="width:auto;padding:12px 24px;display:inline-block;" href="${isAcademy ? "gestao.html" : "agendar.html"}">${isAcademy ? "Ir para a gestao" : "Agendar uma aula"}</a>
+            <a class="btn-secondary" style="width:auto;padding:12px 24px;display:inline-block;" href="${isAcademy ? "gestao.html" : "agendar.html"}">${isAcademy ? "Ir para a gestão" : "Agendar uma aula"}</a>
           </div>
         </div>`;
       plansList.hidden = true;
@@ -410,7 +410,7 @@
       const penalty = fee > 0 && !isCurrent ? fee : 0;
       if (penalty > 0) {
         const ok = window.confirm(
-          `Trocar de plano gera uma multa de ${money(penalty)} (${state.planChange.feePercent}% do plano atual ${state.planChange.currentPlanName}).\n\nO plano atual deixara de valer. Deseja continuar?`
+          `Trocar de plano gera uma multa de ${money(penalty)} (${state.planChange.feePercent}% do plano atual ${state.planChange.currentPlanName}).\n\nO plano atual deixará de valer. Deseja continuar?`
         );
         if (!ok) return;
       }

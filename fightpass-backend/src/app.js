@@ -55,27 +55,27 @@ app.use("/api", routes);
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: "Rota nao encontrada"
+    message: "Rota não encontrada"
   });
 });
 
 app.use((err, req, res, next) => {
   // JSON malformado ou grande demais: erro do cliente, nao do servidor.
   if (err.type === "entity.parse.failed") {
-    return res.status(400).json({ success: false, message: "JSON invalido", details: null });
+    return res.status(400).json({ success: false, message: "JSON inválido", details: null });
   }
   if (err.type === "entity.too.large") {
-    return res.status(413).json({ success: false, message: "Requisicao grande demais", details: null });
+    return res.status(413).json({ success: false, message: "Requisição grande demais", details: null });
   }
 
   if (err.code === "ER_DUP_ENTRY") {
     const messageByKey = [
-      { key: "users.email", message: "Ja existe um usuario com este email" },
-      { key: "email", message: "Ja existe um usuario com este email" },
-      { key: "users.document", message: "CPF/CNPJ ja cadastrado" },
-      { key: "document", message: "CPF/CNPJ ja cadastrado" },
-      { key: "institutions.legal_document", message: "Ja existe uma instituicao com este CNPJ" },
-      { key: "legal_document", message: "Ja existe uma instituicao com este CNPJ" }
+      { key: "users.email", message: "Já existe um usuário com este email" },
+      { key: "email", message: "Já existe um usuário com este email" },
+      { key: "users.document", message: "CPF/CNPJ já cadastrado" },
+      { key: "document", message: "CPF/CNPJ já cadastrado" },
+      { key: "institutions.legal_document", message: "Já existe uma instituição com este CNPJ" },
+      { key: "legal_document", message: "Já existe uma instituição com este CNPJ" }
     ];
     const duplicateMessage = messageByKey.find((item) => err.message.includes(item.key));
 

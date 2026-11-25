@@ -10,7 +10,7 @@
     <main class="main-content">
         <header class="page-hero page-hero-schedule">
             <h1 style="font-size: 28px; color: #1E293B;">Modalidades</h1>
-            <p>Escolha a modalidade, depois o horario, e veja os alunos da aula.</p>
+            <p>Escolha a modalidade, depois o horário, e veja os alunos da aula.</p>
         </header>
 
         <div id="management-message" hidden></div>
@@ -28,19 +28,19 @@
         </section>
 
         <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
-            <h2 style="font-size: 18px; margin-bottom: 16px; color: #1E293B;">2. Horarios</h2>
+            <h2 style="font-size: 18px; margin-bottom: 16px; color: #1E293B;">2. Horários</h2>
             <div id="attendance-slots" class="button-row" style="gap: 10px; flex-wrap: wrap;"></div>
         </section>
 
         <section class="card-white" style="padding: 24px; margin-bottom: 24px;">
-            <h2 style="font-size: 18px; margin-bottom: 8px; color: #1E293B;">3. Alunos do horario</h2>
+            <h2 style="font-size: 18px; margin-bottom: 8px; color: #1E293B;">3. Alunos do horário</h2>
             <h3 id="attendance-slot-title" style="font-size: 15px; color: #64748B; margin-bottom: 16px;"></h3>
             <table>
                 <thead>
                     <tr>
                         <th>Aluno</th>
-                        <th>Presenca</th>
-                        <th>Acao</th>
+                        <th>Presença</th>
+                        <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody id="attendance-table"></tbody>
@@ -52,7 +52,7 @@
         <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Criar modalidade">
             <button type="button" class="modal-close" data-close-modal aria-label="Fechar">&times;</button>
             <h2>Criar modalidade</h2>
-            <p class="muted-note">Cada modalidade tem um professor responsavel. So ele faz a chamada dessa turma.</p>
+            <p class="muted-note">Cada modalidade tem um professor responsável. Só ele faz a chamada dessa turma.</p>
             <form id="create-modality-form">
                 <div class="input-group">
                     <label for="new-modality-name">Modalidade</label>
@@ -64,23 +64,23 @@
                     <input id="new-modality-title" name="title" class="input-field" required placeholder="Ex.: Capoeira iniciante">
                 </div>
                 <div class="input-group">
-                    <label for="new-modality-instructor">Professor responsavel</label>
+                    <label for="new-modality-instructor">Professor responsável</label>
                     <select id="new-modality-instructor" name="instructorId" class="input-field"></select>
                 </div>
                 <div class="input-group">
                     <label for="new-modality-day">Dia</label>
                     <select id="new-modality-day" name="dayOfWeek" class="input-field" required>
                         <option value="1">Segunda</option>
-                        <option value="2">Terca</option>
+                        <option value="2">Terça</option>
                         <option value="3">Quarta</option>
                         <option value="4">Quinta</option>
                         <option value="5">Sexta</option>
-                        <option value="6">Sabado</option>
+                        <option value="6">Sábado</option>
                         <option value="0">Domingo</option>
                     </select>
                 </div>
                 <div class="input-group">
-                    <label for="new-modality-start">Inicio</label>
+                    <label for="new-modality-start">Início</label>
                     <input id="new-modality-start" name="startTime" type="time" min="07:00" max="22:00" class="input-field" required>
                 </div>
                 <div class="input-group">
@@ -96,7 +96,7 @@
                     <input id="new-modality-capacity" name="capacity" type="number" min="1" value="20" class="input-field" required>
                 </div>
                 <div class="input-group">
-                    <label for="new-modality-description">Descricao (opcional)</label>
+                    <label for="new-modality-description">Descrição (opcional)</label>
                     <input id="new-modality-description" name="description" class="input-field">
                 </div>
                 <div id="create-modality-message" class="state-message error" hidden></div>

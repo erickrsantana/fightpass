@@ -38,7 +38,7 @@
       const byRole = Object.fromEntries(data.roles.map((item) => [item.role, item.total]));
 
       const cards = [
-        ["Usuarios cadastrados", data.totalUsers, "var(--primary-blue)"],
+        ["Usuários cadastrados", data.totalUsers, "var(--primary-blue)"],
         ["Alunos", byRole.student || 0, "#10b981"],
         ["Gestores de academia", byRole.institution_admin || 0, "var(--primary-blue)"],
         ["Instrutores", byRole.instructor || 0, "var(--primary-blue)"],

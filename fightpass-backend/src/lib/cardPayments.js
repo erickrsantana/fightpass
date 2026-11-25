@@ -28,7 +28,7 @@ function detectBrand(number) {
   if (/^3[47]/.test(number)) return "Amex";
   if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(number)) return "Elo";
   if (/^(606282|3841)/.test(number)) return "Hipercard";
-  return "Cartao";
+  return "Cartão";
 }
 
 // Valida o cartao (simulado). O numero completo e o CVV nunca sao guardados.
@@ -39,19 +39,19 @@ function validateCard(card) {
   const cvv = String(card && card.cvv || "").replace(/\D/g, "");
 
   if (number.length < 13 || number.length > 19 || !luhnValid(number)) {
-    throw new ApiError(422, "Numero do cartao invalido");
+    throw new ApiError(422, "Número do cartão inválido");
   }
-  if (holder.length < 3) throw new ApiError(422, "Informe o nome impresso no cartao");
-  if (expiry.length !== 4) throw new ApiError(422, "Validade invalida. Use MM/AA");
+  if (holder.length < 3) throw new ApiError(422, "Informe o nome impresso no cartão");
+  if (expiry.length !== 4) throw new ApiError(422, "Validade inválida. Use MM/AA");
   const month = Number(expiry.slice(0, 2));
   const year = 2000 + Number(expiry.slice(2));
   const now = new Date();
   if (month < 1 || month > 12 || year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
-    throw new ApiError(422, "Cartao vencido ou validade invalida");
+    throw new ApiError(422, "Cartão vencido ou validade inválida");
   }
-  if (cvv.length < 3 || cvv.length > 4) throw new ApiError(422, "CVV invalido");
+  if (cvv.length < 3 || cvv.length > 4) throw new ApiError(422, "CVV inválido");
   if (number === DECLINED_TEST_CARD) {
-    throw new ApiError(402, "Pagamento recusado pelo emissor do cartao (simulacao). Tente outro cartao.");
+    throw new ApiError(402, "Pagamento recusado pelo emissor do cartão (simulação). Tente outro cartão.");
   }
   return { brand: detectBrand(number), last4: number.slice(-4) };
 }

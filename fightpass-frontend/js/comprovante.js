@@ -3,7 +3,7 @@
   const $ = (s) => document.querySelector(s);
   const html = (v) => String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   const money = (c) => (Number(c || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const METHODS = { pix: "Pix", boleto: "Boleto", credit_card: "Cartao de credito", debit_card: "Cartao de debito", transfer: "Transferencia" };
+  const METHODS = { pix: "Pix", boleto: "Boleto", credit_card: "Cartão de crédito", debit_card: "Cartão de débito", transfer: "Transferência" };
 
   async function init() {
     const user = await api.requireAuth(["student", "institution_admin"]);
@@ -39,7 +39,7 @@
           ${Number(r.penalty_cents) > 0 ? `<dt>Multa de troca</dt><dd>${money(r.penalty_cents)}</dd>` : ""}
           <dt>Total pago</dt><dd class="receipt-total">${money(r.amount_cents)}</dd>
         </dl>
-        <p class="muted-note">Pagamento simulado para fins de demonstracao academica.</p>`;
+        <p class="muted-note">Pagamento simulado para fins de demonstração acadêmica.</p>`;
     } catch (error) {
       message.hidden = false;
       message.className = "state-message error";

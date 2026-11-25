@@ -46,10 +46,10 @@
   }
 
   function distanceLabel(km) {
-    if (km === null || km === undefined || Number.isNaN(Number(km))) return "Distancia indisponivel";
+    if (km === null || km === undefined || Number.isNaN(Number(km))) return "Distância indisponível";
     const value = Number(km);
-    if (value < 1) return `${Math.round(value * 1000)} m de voce`;
-    return `${value.toFixed(1).replace(".", ",")} km de voce`;
+    if (value < 1) return `${Math.round(value * 1000)} m de você`;
+    return `${value.toFixed(1).replace(".", ",")} km de você`;
   }
 
   async function init() {
@@ -96,8 +96,8 @@
             ${window.FightPassLogo ? window.FightPassLogo.html(item, 48) : ""}
             <div style="min-width:0;">
               <strong>${html(item.name)}</strong>
-              <span>${html([item.neighborhood, item.city].filter(Boolean).join(" - ") || "Endereco nao informado")}</span>
-              <small>${userLocation ? html(distanceLabel(item.distance_km)) : "Ative a localizacao para ver a distancia"}</small>
+              <span>${html([item.neighborhood, item.city].filter(Boolean).join(" - ") || "Endereço não informado")}</span>
+              <small>${userLocation ? html(distanceLabel(item.distance_km)) : "Ative a localização para ver a distância"}</small>
             </div>
           </div>
         </button>
@@ -129,20 +129,20 @@
 
     function askBrowserLocation() {
       if (!navigator.geolocation) {
-        locationStatus.textContent = "Seu navegador nao disponibiliza localizacao.";
+        locationStatus.textContent = "Seu navegador não disponibiliza localização.";
         return Promise.resolve();
       }
-      locationStatus.textContent = "Obtendo sua localizacao...";
+      locationStatus.textContent = "Obtendo sua localização...";
       return new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             resolve(useLocation(
               { lat: position.coords.latitude, lng: position.coords.longitude },
-              "Mostrando as academias mais proximas da sua localizacao atual."
+              "Mostrando as academias mais próximas da sua localização atual."
             ));
           },
           () => {
-            locationStatus.innerHTML = `Nao foi possivel obter sua localizacao. <a href="#" id="use-demo-location">Usar regiao do Senac Nacoes Unidas como referencia</a>`;
+            locationStatus.innerHTML = `Não foi possível obter sua localização. <a href="#" id="use-demo-location">Usar região do Senac Nações Unidas como referência</a>`;
             resolve();
           },
           { enableHighAccuracy: true, timeout: 8000 }
@@ -154,7 +154,7 @@
       classesSection.hidden = false;
       classesTitle.textContent = `2. Aulas - ${selectedInstitution.name}`;
       if (!schedules.length) {
-        classesList.innerHTML = `<div class="empty-state">Esta academia ainda nao tem aulas ativas.</div>`;
+        classesList.innerHTML = `<div class="empty-state">Esta academia ainda não tem aulas ativas.</div>`;
         return;
       }
       const modalityNames = Array.from(new Set(schedules.map((item) => item.modality_name)));
@@ -197,7 +197,7 @@
       endDate.min = nextDate;
       endDate.step = 7;
       endDate.value = addDays(nextDate, 28);
-      setMessage(`Calendario limitado para ${api.dayLabel(item.schedule.day_of_week)}s, conforme a aula escolhida.`, "info");
+      setMessage(`Calendário limitado para ${api.dayLabel(item.schedule.day_of_week)}s, conforme a aula escolhida.`, "info");
       bookingSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
@@ -256,7 +256,7 @@
     locationStatus.addEventListener("click", (event) => {
       if (event.target.id !== "use-demo-location") return;
       event.preventDefault();
-      useLocation(DEMO_LOCATION, "Usando a regiao do Senac Nacoes Unidas como referencia.");
+      useLocation(DEMO_LOCATION, "Usando a região do Senac Nações Unidas como referência.");
     });
 
     bookingDate.addEventListener("change", () => {
@@ -276,11 +276,11 @@
         return;
       }
       if (!dateMatchesSchedule(bookingDate.value)) {
-        setMessage("Escolha uma data compativel com o dia da semana da aula selecionada.", "error");
+        setMessage("Escolha uma data compatível com o dia da semana da aula selecionada.", "error");
         return;
       }
       if (recurring.checked && !dateMatchesSchedule(endDate.value)) {
-        setMessage("A data final da recorrencia deve cair no mesmo dia da semana da aula.", "error");
+        setMessage("A data final da recorrência deve cair no mesmo dia da semana da aula.", "error");
         return;
       }
       setMessage("Enviando agendamento...", "loading");

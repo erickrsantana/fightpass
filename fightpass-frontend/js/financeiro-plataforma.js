@@ -10,7 +10,7 @@
   const INK = "#475569";
 
   const MONTHS_PT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-  const METHOD_LABELS = { pix: "Pix", boleto: "Boleto", credit_card: "Cartao de credito", debit_card: "Cartao de debito", transfer: "Transferencia" };
+  const METHOD_LABELS = { pix: "Pix", boleto: "Boleto", credit_card: "Cartão de crédito", debit_card: "Cartão de débito", transfer: "Transferência" };
 
   const charts = {};
   let currentMonths = 6;
@@ -65,12 +65,12 @@
   function renderCards(data) {
     const totals = data.totals;
     const cards = [
-      ["Receita do mes", money(totals.monthRevenueCents), BLUE, `Previsto ainda neste mes: ${money(totals.monthForecastCents)}`],
-      ["Receita no periodo", money(totals.periodRevenueCents), BLUE, `Taxa de ${data.feePercent}% + mensalidades + multas`],
+      ["Receita do mês", money(totals.monthRevenueCents), BLUE, `Previsto ainda neste mês: ${money(totals.monthForecastCents)}`],
+      ["Receita no período", money(totals.periodRevenueCents), BLUE, `Taxa de ${data.feePercent}% + mensalidades + multas`],
       ["Pago pelos alunos", money(totals.periodStudentGrossCents), "#10b981", "Volume total dos planos pagos"],
-      ["Ticket medio do aluno", money(totals.averageTicketCents), BLUE, "Valor medio por pagamento"],
+      ["Ticket médio do aluno", money(totals.averageTicketCents), BLUE, "Valor médio por pagamento"],
       ["Mensalidades ativas", money(totals.recurringDojoCents), ORANGE, `${totals.activeSubscriptions} academia(s) com plano ativo`],
-      ["Novos neste mes", `${totals.newStudentsMonth} alunos`, "#10b981", `${totals.newInstitutionsMonth} academia(s) nova(s)`]
+      ["Novos neste mês", `${totals.newStudentsMonth} alunos`, "#10b981", `${totals.newInstitutionsMonth} academia(s) nova(s)`]
     ];
     $("#fin-cards").innerHTML = cards.map(([label, value, color, hint]) => `
       <div class="card-white">
@@ -107,7 +107,7 @@
     });
 
     $("#table-revenue").innerHTML = `
-      <thead><tr><th>Mes</th><th class="num">Taxa sobre aulas</th><th class="num">Mensalidades</th><th class="num">Multas</th><th class="num">Total</th></tr></thead>
+      <thead><tr><th>Mês</th><th class="num">Taxa sobre aulas</th><th class="num">Mensalidades</th><th class="num">Multas</th><th class="num">Total</th></tr></thead>
       <tbody>${data.months.map((month, index) => `
         <tr>
           <td>${esc(monthLabel(month))}</td>
@@ -142,7 +142,7 @@
     });
 
     $("#table-signups").innerHTML = `
-      <thead><tr><th>Mes</th><th class="num">Alunos</th><th class="num">Academias</th></tr></thead>
+      <thead><tr><th>Mês</th><th class="num">Alunos</th><th class="num">Academias</th></tr></thead>
       <tbody>${data.months.map((month, index) => `
         <tr>
           <td>${esc(monthLabel(month))}</td>
@@ -179,7 +179,7 @@
       if (charts["chart-institutions"]) charts["chart-institutions"].destroy();
       const canvas = $("#chart-institutions");
       canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-      canvas.parentElement.insertAdjacentHTML("beforeend", `<p class="fin-note" data-empty>Ainda nao ha aulas realizadas neste periodo.</p>`);
+      canvas.parentElement.insertAdjacentHTML("beforeend", `<p class="fin-note" data-empty>Ainda não há aulas realizadas neste período.</p>`);
       return;
     }
     document.querySelectorAll("[data-empty]").forEach((node) => node.remove());

@@ -59,7 +59,7 @@ function detectBrand(number) {
   if (/^3[47]/.test(number)) return "Amex";
   if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(number)) return "Elo";
   if (/^(606282|3841)/.test(number)) return "Hipercard";
-  return "Cartao";
+  return "Cartão";
 }
 
 // Valida o cartao (simulado). O numero completo e o CVV nunca sao guardados.
@@ -70,19 +70,19 @@ function validateCard(card) {
   const cvv = String(card && card.cvv || "").replace(/\D/g, "");
 
   if (number.length < 13 || number.length > 19 || !luhnValid(number)) {
-    throw new ApiError(422, "Numero do cartao invalido");
+    throw new ApiError(422, "Número do cartão inválido");
   }
-  if (holder.length < 3) throw new ApiError(422, "Informe o nome impresso no cartao");
-  if (expiry.length !== 4) throw new ApiError(422, "Validade invalida. Use MM/AA");
+  if (holder.length < 3) throw new ApiError(422, "Informe o nome impresso no cartão");
+  if (expiry.length !== 4) throw new ApiError(422, "Validade inválida. Use MM/AA");
   const month = Number(expiry.slice(0, 2));
   const year = 2000 + Number(expiry.slice(2));
   const now = new Date();
   if (month < 1 || month > 12 || year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
-    throw new ApiError(422, "Cartao vencido ou validade invalida");
+    throw new ApiError(422, "Cartão vencido ou validade inválida");
   }
-  if (cvv.length < 3 || cvv.length > 4) throw new ApiError(422, "CVV invalido");
+  if (cvv.length < 3 || cvv.length > 4) throw new ApiError(422, "CVV inválido");
   if (number === DECLINED_TEST_CARD) {
-    throw new ApiError(402, "Pagamento recusado pelo emissor do cartao (simulacao). Tente outro cartao.");
+    throw new ApiError(402, "Pagamento recusado pelo emissor do cartão (simulação). Tente outro cartão.");
   }
   return { brand: detectBrand(number), last4: number.slice(-4) };
 }
@@ -210,7 +210,7 @@ router.get(
 router.post(
   "/access/cancel",
   auth(["student"]),
-  [body("accessPassId").optional().isInt({ min: 1 }).withMessage("Plano invalido")],
+  [body("accessPassId").optional().isInt({ min: 1 }).withMessage("Plano inválido")],
   validateRequest,
   asyncHandler(async (req, res) => {
     const params = [req.user.sub];
@@ -246,17 +246,17 @@ router.post(
   "/payments/simulate",
   auth(["student"]),
   [
-    body("planId").isInt({ min: 1 }).withMessage("Plano invalido"),
-    body("method").isIn(PAYMENT_METHODS).withMessage("Metodo de pagamento invalido"),
-    body("acceptPenalty").optional().isBoolean().withMessage("Confirmacao de multa invalida"),
-    body("installments").optional().isInt({ min: 1, max: MAX_INSTALLMENTS }).withMessage("Parcelamento invalido")
+    body("planId").isInt({ min: 1 }).withMessage("Plano inválido"),
+    body("method").isIn(PAYMENT_METHODS).withMessage("Método de pagamento inválido"),
+    body("acceptPenalty").optional().isBoolean().withMessage("Confirmação de multa inválida"),
+    body("installments").optional().isInt({ min: 1, max: MAX_INSTALLMENTS }).withMessage("Parcelamento inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
     assertSimulationAllowed();
     const plan = await findPlan(req.body.planId);
     if (!plan || plan.code === "trial_1_day") {
-      throw new ApiError(404, "Plano nao encontrado");
+      throw new ApiError(404, "Plano não encontrado");
     }
 
     // Trocar um plano pago que ainda esta em uso gera multa; o aluno precisa confirmar.
@@ -340,8 +340,8 @@ router.post(
         pixCode,
         boletoCode,
         referenceCode,
-        prototypeNotice: "Pagamento ficticio para demonstracao academica. Nenhuma cobranca real foi gerada."
-      }, "Cobranca gerada com sucesso");
+        prototypeNotice: "Pagamento fictício para demonstração acadêmica. Nenhuma cobrança real foi gerada."
+      }, "Cobrança gerada com sucesso");
     } catch (error) {
       await connection.rollback();
       throw error;
@@ -357,22 +357,22 @@ router.post(
   "/payments/checkout",
   auth(["student"]),
   [
-    body("planId").isInt({ min: 1 }).withMessage("Plano invalido"),
-    body("acceptPenalty").optional().isBoolean().withMessage("Confirmacao de multa invalida")
+    body("planId").isInt({ min: 1 }).withMessage("Plano inválido"),
+    body("acceptPenalty").optional().isBoolean().withMessage("Confirmação de multa inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
     if (env.payments.mode !== "gateway") {
-      throw new ApiError(409, "Pagamento online nao esta ativado neste ambiente");
+      throw new ApiError(409, "Pagamento online não está ativado neste ambiente");
     }
     if (!mercadoPago.isConfigured()) {
-      throw new ApiError(503, "Pagamento online indisponivel no momento");
+      throw new ApiError(503, "Pagamento online indisponível no momento");
     }
 
     // O valor SEMPRE vem do banco, nunca do navegador.
     const plan = await findPlan(req.body.planId);
     if (!plan || plan.code === "trial_1_day" || Number(plan.price_cents) <= 0) {
-      throw new ApiError(404, "Plano nao encontrado");
+      throw new ApiError(404, "Plano não encontrado");
     }
 
     const currentPlan = await findPaidPlanInUse(req.user.sub);
@@ -434,7 +434,7 @@ router.post(
         penaltyCents,
         checkoutUrl: preference.checkoutUrl,
         status: "pending"
-      }, "Cobranca criada. Redirecione o aluno para concluir o pagamento.");
+      }, "Cobrança criada. Redirecione o aluno para concluir o pagamento.");
     } catch (error) {
       await db.query("UPDATE payment_simulations SET status = 'cancelled' WHERE id = ?", [paymentId]);
       throw error;
@@ -451,7 +451,7 @@ router.post(
     return success(res, {
       paymentId: result.paymentId,
       accessPassId: result.accessPassId,
-      prototypeNotice: "Pagamento confirmado de forma ficticia para demonstracao."
+      prototypeNotice: "Pagamento confirmado de forma fictícia para demonstração."
     }, "Pagamento confirmado e plano ativado");
   })
 );
@@ -501,8 +501,8 @@ router.get(
       [req.params.id, req.user.sub]
     );
     const receipt = rows[0];
-    if (!receipt) throw new ApiError(404, "Pagamento nao encontrado");
-    if (receipt.status !== "paid") throw new ApiError(409, "O comprovante so existe para pagamentos confirmados");
+    if (!receipt) throw new ApiError(404, "Pagamento não encontrado");
+    if (receipt.status !== "paid") throw new ApiError(409, "O comprovante só existe para pagamentos confirmados");
     const document = String(receipt.student_document || "");
     receipt.student_document = document.length >= 11 ? `***.${document.slice(3, 6)}.${document.slice(6, 9)}-**` : "";
     return success(res, receipt, "Comprovante carregado com sucesso");
@@ -518,8 +518,8 @@ router.post(
       "UPDATE payment_simulations SET status = 'cancelled' WHERE id = ? AND student_id = ? AND status = 'pending'",
       [req.params.id, req.user.sub]
     );
-    if (!result.affectedRows) throw new ApiError(404, "Nenhuma cobranca pendente encontrada");
-    return success(res, { id: Number(req.params.id) }, "Cobranca cancelada");
+    if (!result.affectedRows) throw new ApiError(404, "Nenhuma cobrança pendente encontrada");
+    return success(res, { id: Number(req.params.id) }, "Cobrança cancelada");
   })
 );
 

@@ -85,17 +85,17 @@ function getCurrentTerms() {
 
 function assertValidOrigin(origin) {
   if (!ACCEPTANCE_ORIGINS.has(origin)) {
-    throw new ApiError(422, "Origem de aceite dos termos invalida");
+    throw new ApiError(422, "Origem de aceite dos termos inválida");
   }
 }
 
 function assertTermsAccepted({ accepted, version }) {
   if (!isAccepted(accepted)) {
-    throw new ApiError(422, "Aceite dos Termos de Uso obrigatorio para continuar");
+    throw new ApiError(422, "Aceite dos Termos de Uso obrigatório para continuar");
   }
 
   if (version !== CURRENT_TERMS.version) {
-    throw new ApiError(422, "Versao dos Termos de Uso invalida ou desatualizada");
+    throw new ApiError(422, "Versão dos Termos de Uso inválida ou desatualizada");
   }
 }
 
@@ -109,7 +109,7 @@ async function recordTermsAcceptance({
   assertValidOrigin(origin);
 
   if (!userId) {
-    throw new ApiError(422, "Usuario obrigatorio para registrar aceite dos termos");
+    throw new ApiError(422, "Usuário obrigatório para registrar aceite dos termos");
   }
 
   const executor = connection || db.pool;

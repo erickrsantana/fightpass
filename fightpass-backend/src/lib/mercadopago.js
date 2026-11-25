@@ -15,7 +15,7 @@ function isGatewayMode() {
 
 function assertConfigured() {
   if (!isConfigured()) {
-    throw new ApiError(503, "Pagamento online indisponivel: gateway nao configurado");
+    throw new ApiError(503, "Pagamento online indisponível: gateway não configurado");
   }
 }
 
@@ -39,13 +39,13 @@ async function mpRequest(path, { method = "GET", body, idempotencyKey } = {}) {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       console.error("[mercadopago] erro", response.status, JSON.stringify(payload).slice(0, 500));
-      throw new ApiError(502, "O Mercado Pago recusou a solicitacao. Tente novamente em instantes.");
+      throw new ApiError(502, "O Mercado Pago recusou a solicitação. Tente novamente em instantes.");
     }
     return payload;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     console.error("[mercadopago] falha de rede:", error.message);
-    throw new ApiError(502, "Nao foi possivel falar com o Mercado Pago agora. Tente novamente em instantes.");
+    throw new ApiError(502, "Não foi possível falar com o Mercado Pago agora. Tente novamente em instantes.");
   } finally {
     clearTimeout(timer);
   }
@@ -88,7 +88,7 @@ async function createPreference({ title, amountCents, externalReference, payerEm
 
 // Sempre confirmamos o pagamento consultando a API do Mercado Pago (nunca confiamos so no corpo do webhook).
 async function getPayment(paymentId) {
-  if (!/^\d{1,20}$/.test(String(paymentId))) throw new ApiError(400, "Identificador de pagamento invalido");
+  if (!/^\d{1,20}$/.test(String(paymentId))) throw new ApiError(400, "Identificador de pagamento inválido");
   return mpRequest(`/v1/payments/${paymentId}`);
 }
 

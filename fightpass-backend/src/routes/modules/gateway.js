@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Publico: o frontend descobre se deve mostrar o pagamento real ou o simulado.
 router.get("/payments/config", (req, res) =>
-  success(res, { mode: env.payments.mode }, "Configuracao de pagamentos")
+  success(res, { mode: env.payments.mode }, "Configuração de pagamentos")
 );
 
 // Webhook do Mercado Pago. Nunca confia no corpo: valida a assinatura e consulta o pagamento na API.
@@ -27,7 +27,7 @@ router.post(
         dataId,
         secret: env.payments.mercadoPagoWebhookSecret
       });
-      if (!ok) return res.status(401).json({ success: false, message: "Assinatura invalida" });
+      if (!ok) return res.status(401).json({ success: false, message: "Assinatura inválida" });
     } else if (env.isProduction) {
       return res.status(503).json({ success: false, message: "Webhook sem segredo configurado" });
     }

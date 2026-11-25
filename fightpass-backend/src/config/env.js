@@ -29,7 +29,7 @@ const jwtSecret = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 
 // Em producao, recusa subir com segredo fraco: quem conhece o segredo padrao consegue forjar tokens de qualquer usuario.
 if (isProduction && (jwtSecret === DEFAULT_JWT_SECRET || jwtSecret.length < 32)) {
-  throw new Error("JWT_SECRET ausente ou fraco. Defina um segredo aleatorio de pelo menos 32 caracteres (ex.: openssl rand -hex 48).");
+  throw new Error("JWT_SECRET ausente ou fraco. Defina um segredo aleatório de pelo menos 32 caracteres (ex.: openssl rand -hex 48).");
 }
 
 function parseList(value) {

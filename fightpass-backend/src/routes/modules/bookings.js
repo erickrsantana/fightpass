@@ -37,15 +37,15 @@ async function validateBooking(studentId, classScheduleId, bookingDate) {
 
   const schedule = scheduleRows[0];
   if (!schedule || schedule.class_status !== "active") {
-    return { message: "Horario de aula nao encontrado ou inativo" };
+    return { message: "Horário de aula não encontrado ou inativo" };
   }
 
   if (bookingDate < todayDateOnly()) {
-    return { message: "Nao e permitido agendar aula em data passada" };
+    return { message: "Não é permitido agendar aula em data passada" };
   }
 
   if (Number(schedule.day_of_week) !== getDateDayOfWeek(bookingDate)) {
-    return { message: "A data escolhida nao corresponde ao dia da semana da turma" };
+    return { message: "A data escolhida não corresponde ao dia da semana da turma" };
   }
 
   const duplicate = await db.query(
@@ -57,7 +57,7 @@ async function validateBooking(studentId, classScheduleId, bookingDate) {
   );
 
   if (duplicate[0]) {
-    return { message: "Ja existe agendamento para este aluno, horario e data" };
+    return { message: "Já existe agendamento para este aluno, horário e data" };
   }
 
   const capacityRows = await db.query(
@@ -70,7 +70,7 @@ async function validateBooking(studentId, classScheduleId, bookingDate) {
   );
 
   if (capacityRows[0].booked_count >= schedule.capacity) {
-    return { message: "Nao ha vagas disponiveis para esta aula" };
+    return { message: "Não há vagas disponíveis para esta aula" };
   }
 
   return { schedule };
@@ -168,9 +168,9 @@ router.post(
   "/",
   auth(["student"]),
   [
-    body("classScheduleId").isInt({ min: 1 }).withMessage("Horario de aula invalido"),
-    body("bookingDate").isISO8601().withMessage("Data de agendamento invalida"),
-    body("isTrial").optional().isBoolean().withMessage("Modo teste invalido")
+    body("classScheduleId").isInt({ min: 1 }).withMessage("Horário de aula inválido"),
+    body("bookingDate").isISO8601().withMessage("Data de agendamento inválida"),
+    body("isTrial").optional().isBoolean().withMessage("Modo teste inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -212,10 +212,10 @@ router.post(
   "/recurring",
   auth(["student"]),
   [
-    body("classScheduleId").isInt({ min: 1 }).withMessage("Horario de aula invalido"),
-    body("startDate").isISO8601().withMessage("Data inicial invalida"),
-    body("endDate").isISO8601().withMessage("Data final invalida"),
-    body("isTrial").optional().isBoolean().withMessage("Modo teste invalido")
+    body("classScheduleId").isInt({ min: 1 }).withMessage("Horário de aula inválido"),
+    body("startDate").isISO8601().withMessage("Data inicial inválida"),
+    body("endDate").isISO8601().withMessage("Data final inválida"),
+    body("isTrial").optional().isBoolean().withMessage("Modo teste inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -307,17 +307,17 @@ router.delete(
     const booking = rows[0];
 
     if (!booking || booking.student_id !== req.user.sub) {
-      throw new ApiError(404, "Agendamento nao encontrado");
+      throw new ApiError(404, "Agendamento não encontrado");
     }
 
     if (booking.status === "cancelled") {
-      throw new ApiError(409, "Agendamento ja esta cancelado");
+      throw new ApiError(409, "Agendamento já está cancelado");
     }
 
     const classDateTime = bookingDateTime(booking.booking_date.toISOString ? booking.booking_date.toISOString().slice(0, 10) : booking.booking_date, booking.start_time);
     const limitInMs = env.bookingCancellationLimitHours * 60 * 60 * 1000;
     if (classDateTime.getTime() - Date.now() < limitInMs) {
-      throw new ApiError(409, `Cancelamento permitido somente ate ${env.bookingCancellationLimitHours} horas antes da aula`);
+      throw new ApiError(409, `Cancelamento permitido somente até ${env.bookingCancellationLimitHours} horas antes da aula`);
     }
 
     await db.query("UPDATE bookings SET status = 'cancelled' WHERE id = ?", [req.params.id]);

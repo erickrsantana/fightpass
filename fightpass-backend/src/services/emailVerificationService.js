@@ -23,11 +23,11 @@ async function issueVerificationCode(user, metadata = {}, connection = null) {
 async function sendCode(user, code, purpose = "register") {
   try {
     const result = await sendVerificationEmail({ to: user.email, name: user.name, code, purpose });
-    if (result.skipped) console.warn(`[email] Verificacao sem envio: ${result.reason}`);
+    if (result.skipped) console.warn(`[email] Verificação sem envio: ${result.reason}`);
     return result;
   } catch (error) {
-    console.error("[email] Falha ao enviar codigo de verificacao:", error.message);
-    if (!env.isProduction) console.log(`[email] (modo desenvolvimento) Codigo de ${purpose} para ${user.email}: ${code}`);
+    console.error("[email] Falha ao enviar código de verificação:", error.message);
+    if (!env.isProduction) console.log(`[email] (modo desenvolvimento) Código de ${purpose} para ${user.email}: ${code}`);
     return { skipped: true, reason: "falha no envio" };
   }
 }
@@ -44,7 +44,7 @@ async function findUnverifiedUser(email) {
 
 // Confere o codigo. Erra de forma generica para nao revelar se o e-mail existe.
 async function verifyEmailCode(email, code) {
-  const invalid = () => new ApiError(400, "Codigo invalido ou expirado");
+  const invalid = () => new ApiError(400, "Código inválido ou expirado");
   const user = await findUnverifiedUser(email);
   if (!user || !user.is_active) throw invalid();
 
@@ -57,9 +57,9 @@ async function verifyEmailCode(email, code) {
   const record = rows[0];
   if (!record || record.used_at) throw invalid();
 
-  if (new Date(record.expires_at) < new Date()) throw new ApiError(400, "Codigo expirado. Solicite um novo codigo.");
+  if (new Date(record.expires_at) < new Date()) throw new ApiError(400, "Código expirado. Solicite um novo código.");
   if (record.attempts >= env.emailVerification.maxAttempts) {
-    throw new ApiError(429, "Muitas tentativas. Solicite um novo codigo.");
+    throw new ApiError(429, "Muitas tentativas. Solicite um novo código.");
   }
 
   const expected = hashVerificationCode(String(code), user.id, env.jwt.secret);
@@ -92,7 +92,7 @@ async function resendVerificationCode(email, metadata = {}) {
   const elapsed = (Date.now() - new Date(last.created_at).getTime()) / 1000;
   if (elapsed > 30 * 60) return { sent: false };
   if (elapsed < env.emailVerification.resendCooldownSeconds) {
-    throw new ApiError(429, `Aguarde ${Math.ceil(env.emailVerification.resendCooldownSeconds - elapsed)} segundos para pedir um novo codigo`);
+    throw new ApiError(429, `Aguarde ${Math.ceil(env.emailVerification.resendCooldownSeconds - elapsed)} segundos para pedir um novo código`);
   }
 
   const code = await issueVerificationCode(user, metadata);

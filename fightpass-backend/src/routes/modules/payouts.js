@@ -18,7 +18,7 @@ function currentMonth() {
 function parseMonth(value) {
   const reference = value && /^\d{4}-\d{2}$/.test(value) ? value : currentMonth();
   const [year, month] = reference.split("-").map(Number);
-  if (month < 1 || month > 12) throw new ApiError(422, "Mes invalido. Use o formato AAAA-MM");
+  if (month < 1 || month > 12) throw new ApiError(422, "Mês inválido. Use o formato AAAA-MM");
   const lastDay = new Date(year, month, 0).getDate();
   return { reference, start: `${reference}-01`, end: `${reference}-${pad(lastDay)}` };
 }
@@ -51,7 +51,7 @@ router.get(
   auth(["institution_admin"]),
   asyncHandler(async (req, res) => {
     const institutionId = Number(req.query.institutionId);
-    if (!Number.isInteger(institutionId) || institutionId <= 0) throw new ApiError(422, "Instituicao invalida");
+    if (!Number.isInteger(institutionId) || institutionId <= 0) throw new ApiError(422, "Instituição inválida");
     await ensureInstitutionAccess(req.user.sub, institutionId, ["institution_admin"]);
     const period = parseMonth(req.query.month);
 
@@ -104,8 +104,8 @@ router.put(
   asyncHandler(async (req, res) => {
     const institutionId = Number(req.body.institutionId);
     const rate = Number(req.body.rateCents);
-    if (!Number.isInteger(institutionId) || institutionId <= 0) throw new ApiError(422, "Instituicao invalida");
-    if (!Number.isInteger(rate) || rate < 0 || rate > 10000000) throw new ApiError(422, "Valor por aula invalido");
+    if (!Number.isInteger(institutionId) || institutionId <= 0) throw new ApiError(422, "Instituição inválida");
+    if (!Number.isInteger(rate) || rate < 0 || rate > 10000000) throw new ApiError(422, "Valor por aula inválido");
     await ensureInstitutionAccess(req.user.sub, institutionId, ["institution_admin"]);
 
     const result = await db.query(
@@ -113,7 +113,7 @@ router.put(
        WHERE institution_id = ? AND user_id = ? AND membership_role = 'instructor'`,
       [rate, institutionId, req.params.id]
     );
-    if (!result.affectedRows) throw new ApiError(404, "Instrutor nao encontrado nesta academia");
+    if (!result.affectedRows) throw new ApiError(404, "Instrutor não encontrado nesta academia");
     await auditLog(req.user.sub, "payouts.set_rate", "users", Number(req.params.id), { institutionId, rate });
     return success(res, { id: Number(req.params.id), rateCents: rate }, "Valor por aula atualizado");
   })
@@ -127,7 +127,7 @@ router.post(
     const institutionId = Number(req.body.institutionId);
     const instructorId = Number(req.params.id);
     const method = ["pix", "transfer"].includes(req.body.method) ? req.body.method : "pix";
-    if (!Number.isInteger(institutionId) || institutionId <= 0) throw new ApiError(422, "Instituicao invalida");
+    if (!Number.isInteger(institutionId) || institutionId <= 0) throw new ApiError(422, "Instituição inválida");
     await ensureInstitutionAccess(req.user.sub, institutionId, ["institution_admin"]);
     const period = parseMonth(req.body.month);
 
@@ -136,19 +136,19 @@ router.post(
        WHERE institution_id = ? AND user_id = ? AND membership_role = 'instructor' LIMIT 1`,
       [institutionId, instructorId]
     );
-    if (!members[0]) throw new ApiError(404, "Instrutor nao encontrado nesta academia");
+    if (!members[0]) throw new ApiError(404, "Instrutor não encontrado nesta academia");
     if (members[0].lesson_rate_cents === null) throw new ApiError(409, "Defina o valor por aula antes de pagar");
 
     const existing = await db.query(
       "SELECT id FROM instructor_payouts WHERE institution_id = ? AND instructor_id = ? AND reference_month = ? LIMIT 1",
       [institutionId, instructorId, period.reference]
     );
-    if (existing[0]) throw new ApiError(409, "Este mes ja foi pago para este instrutor");
+    if (existing[0]) throw new ApiError(409, "Este mês já foi pago para este instrutor");
 
     const lessons = await countLessons(institutionId, instructorId, period.start, period.end);
     const rate = Number(members[0].lesson_rate_cents);
     const amount = lessons * rate;
-    if (amount <= 0) throw new ApiError(409, "Nao ha aulas dadas neste mes para pagar");
+    if (amount <= 0) throw new ApiError(409, "Não há aulas dadas neste mês para pagar");
 
     const code = receiptCode(instructorId);
     const insert = await db.query(
@@ -162,7 +162,7 @@ router.post(
     });
     return success(res, {
       id: insert.insertId, receiptCode: code, lessons, rateCents: rate, amountCents: amount,
-      prototypeNotice: "Pagamento ficticio para demonstracao academica."
+      prototypeNotice: "Pagamento fictício para demonstração acadêmica."
     }, "Pagamento ao instrutor realizado");
   })
 );
@@ -220,7 +220,7 @@ router.get(
       items: result,
       receivedCents: result.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.amountCents, 0),
       pendingCents: result.filter((row) => row.status === "pending" && row.amountCents).reduce((sum, row) => sum + row.amountCents, 0)
-    }, "Salario carregado com sucesso");
+    }, "Salário carregado com sucesso");
   })
 );
 

@@ -184,7 +184,7 @@
 
     function tick() {
       resend.disabled = wait > 0;
-      resend.textContent = wait > 0 ? `Reenviar codigo em ${wait}s` : "Reenviar codigo";
+      resend.textContent = wait > 0 ? `Reenviar código em ${wait}s` : "Reenviar código";
       if (wait > 0) { wait -= 1; timer = setTimeout(tick, 1000); }
     }
     wait = 60; tick();
@@ -203,7 +203,7 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const code = String(new FormData(form).get("code") || "").replace(/\D/g, "");
-      setMessage("#verify-message", "Conferindo codigo...", "loading");
+      setMessage("#verify-message", "Conferindo código...", "loading");
       try {
         const response = await api.verifyEmail(email, code);
         api.saveSession(response.data);
@@ -490,7 +490,7 @@
     const notices = [];
     const tomorrowClasses = (bookings || []).filter((item) => item.status !== "cancelled" && isTomorrow(item.booking_date));
     tomorrowClasses.forEach((item) => {
-      notices.push(`Amanha tem ${item.modality_name} em ${item.institution_name} as ${api.timeLabel(item.start_time)}.`);
+      notices.push(`Amanhã tem ${item.modality_name} em ${item.institution_name} as ${api.timeLabel(item.start_time)}.`);
     });
 
     if (accessData && accessData.hasActiveAccess) {
@@ -502,8 +502,8 @@
 
     panel.hidden = false;
     panel.innerHTML = notices.length
-      ? `<h2 style="font-size:18px; margin-bottom:10px;">Notificacoes</h2>${notices.map((notice) => `<div class="notice-card">${html(notice)}</div>`).join("")}`
-      : `<h2 style="font-size:18px; margin-bottom:10px;">Notificacoes</h2><div class="empty-state">Nenhum aviso importante para hoje.</div>`;
+      ? `<h2 style="font-size:18px; margin-bottom:10px;">Notificações</h2>${notices.map((notice) => `<div class="notice-card">${html(notice)}</div>`).join("")}`
+      : `<h2 style="font-size:18px; margin-bottom:10px;">Notificações</h2><div class="empty-state">Nenhum aviso importante para hoje.</div>`;
   }
 
   async function initMapa() {
@@ -668,7 +668,7 @@
                 <div style="min-width:0;">
                   <strong>${html(item.name)}${!isStudent && String(item.id) === String(ownInstitutionId) ? " (sua academia)" : ""}</strong>
                   <span>${html([item.neighborhood, item.city, item.state].filter(Boolean).join(" - "))}</span>
-                  <small>${item.distance_km !== null && item.distance_km !== undefined ? `${html(item.distance_km)} km de voce` : hasCoordinates(item) ? "Localizacao disponivel no mapa" : "Coordenadas pendentes para este CEP"}</small>
+                  <small>${item.distance_km !== null && item.distance_km !== undefined ? `${html(item.distance_km)} km de você` : hasCoordinates(item) ? "Localização disponível no mapa" : "Coordenadas pendentes para este CEP"}</small>
                 </div>
               </div>
             </button>
@@ -708,11 +708,11 @@
     if (locateButton) {
       locateButton.addEventListener("click", () => {
         if (!navigator.geolocation) {
-          setMessage("#map-message", "Seu navegador nao disponibilizou localizacao.", "error");
+          setMessage("#map-message", "Seu navegador não disponibilizou localização.", "error");
           return;
         }
 
-        setMessage("#map-message", "Obtendo sua localizacao...", "loading");
+        setMessage("#map-message", "Obtendo sua localização...", "loading");
         navigator.geolocation.getCurrentPosition(
           (position) => {
             userCoordinates = {
@@ -721,7 +721,7 @@
             };
             loadInstitutions();
           },
-          () => setMessage("#map-message", "Nao foi possivel obter sua localizacao. Digite um bairro ou endereco.", "error"),
+          () => setMessage("#map-message", "Não foi possível obter sua localização. Digite um bairro ou endereço.", "error"),
           { enableHighAccuracy: true, timeout: 8000 }
         );
       });
@@ -975,8 +975,8 @@
           const tomorrowClasses = response.data.filter((item) => item.status !== "cancelled" && isTomorrow(item.booking_date));
           reminders.hidden = false;
           reminders.innerHTML = tomorrowClasses.length
-            ? tomorrowClasses.map((item) => `<div class="notice-card">Lembrete: amanha voce tem ${html(item.modality_name)} em ${html(item.institution_name)} as ${api.timeLabel(item.start_time)}.</div>`).join("")
-            : `<div class="empty-state">Nenhuma aula marcada para amanha.</div>`;
+            ? tomorrowClasses.map((item) => `<div class="notice-card">Lembrete: amanhã você tem ${html(item.modality_name)} em ${html(item.institution_name)} as ${api.timeLabel(item.start_time)}.</div>`).join("")
+            : `<div class="empty-state">Nenhuma aula marcada para amanhã.</div>`;
         }
         renderBookings();
         setMessage("#my-classes-message", "", "info");
@@ -1070,10 +1070,10 @@
     function resizeImage(file, maxSize) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Nao foi possivel ler a foto"));
+        reader.onerror = () => reject(new Error("Não foi possível ler a foto"));
         reader.onload = () => {
           const img = new Image();
-          img.onerror = () => reject(new Error("Arquivo de imagem invalido"));
+          img.onerror = () => reject(new Error("Arquivo de imagem inválido"));
           img.onload = () => {
             const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
             const canvas = document.createElement("canvas");
@@ -1107,7 +1107,7 @@
           $("#profile-avatar-url").value = dataUrl;
           renderProfilePhoto({ name: $("#profile-name").value, avatarUrl: dataUrl });
           updatePhotoControls();
-          setMessage("#profile-message", "Foto escolhida. Clique em Salvar alteracoes para confirmar.", "info");
+          setMessage("#profile-message", "Foto escolhida. Clique em Salvar alterações para confirmar.", "info");
         } catch (error) {
           setMessage("#profile-message", error.message, "error");
         }
@@ -1119,7 +1119,7 @@
         $("#profile-avatar-url").value = "";
         renderProfilePhoto({ name: $("#profile-name").value, avatarUrl: "" });
         updatePhotoControls();
-        setMessage("#profile-message", "Foto removida. Clique em Salvar alteracoes para confirmar.", "info");
+        setMessage("#profile-message", "Foto removida. Clique em Salvar alterações para confirmar.", "info");
       });
     }
 
@@ -1149,7 +1149,7 @@
       panel.innerHTML = `
         <h2 style="font-size: 20px; margin-bottom: 12px;">Plano do aluno</h2>
         <p><strong>${html(access.plan_name)}</strong></p>
-        <p style="color:#64748B;">Valido ate ${api.formatDate(access.expires_at)} | Treinos restantes: ${remaining}</p>
+        <p style="color:#64748B;">Válido até ${api.formatDate(access.expires_at)} | Treinos restantes: ${remaining}</p>
         ${remainingDays !== null && remainingDays <= 3 ? `<div class="notice-card warning">Seu plano vence ${remainingDays <= 0 ? "hoje" : `em ${remainingDays} dia(s)`}.</div>` : ""}
         <div class="button-row" style="margin-top:14px;">
           <a class="btn-secondary" style="width:auto; padding:10px 18px;" href="planos.html">Trocar plano</a>
@@ -1466,7 +1466,7 @@
       }
 
       if (!selected) {
-        attendanceTable.innerHTML = `<tr><td colspan="3">${modalities.length ? "Toque em um horario para ver os alunos." : "Nenhuma aula agendada para a data selecionada."}</td></tr>`;
+        attendanceTable.innerHTML = `<tr><td colspan="3">${modalities.length ? "Toque em um horário para ver os alunos." : "Nenhuma aula agendada para a data selecionada."}</td></tr>`;
         return;
       }
 
@@ -1481,7 +1481,7 @@
             </div>
           </td>
         </tr>
-      `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horario.</td></tr>`;
+      `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horário.</td></tr>`;
     }
 
     async function loadRoster() {
@@ -1536,7 +1536,7 @@
       `).join("") : `<tr><td colspan="5">Nenhum instrutor cadastrado.</td></tr>`;
       const select = $("#class-instructor");
       if (select) {
-        select.innerHTML = `<option value="">Sem instrutor (so a academia faz a chamada)</option>` + list
+        select.innerHTML = `<option value="">Sem instrutor (só a academia faz a chamada)</option>` + list
           .filter((item) => item.status === "active")
           .map((item) => `<option value="${item.id}">${html(item.name)}</option>`).join("");
       }
@@ -1657,7 +1657,7 @@
           });
           instructorForm.reset();
           await loadInstructors();
-          setMessage("#management-message", `${response.message}. Passe o e-mail e a senha provisoria ao professor.`, "success");
+          setMessage("#management-message", `${response.message}. Passe o e-mail e a senha provisória ao professor.`, "success");
         } catch (error) {
           setMessage("#management-message", error.message, "error", error.details);
         }
@@ -1804,12 +1804,12 @@
         const own = slots.filter((slot) => slot.modality === name);
         const students = own.reduce((sum, slot) => sum + slot.items.length, 0);
         return `<button type="button" class="${name === selectedModality ? "btn-primary" : "btn-secondary"}" style="width:auto; padding:12px 20px;" data-attendance-modality="${html(name)}">
-          ${html(name)}<br><small>${own.length} horario${own.length === 1 ? "" : "s"} | ${students} aluno${students === 1 ? "" : "s"}</small>
+          ${html(name)}<br><small>${own.length} horário${own.length === 1 ? "" : "s"} | ${students} aluno${students === 1 ? "" : "s"}</small>
         </button>`;
-      }).join("") : `<div class="empty-state">${user.role === "instructor" ? "Voce nao tem aula neste dia." : "Nenhuma modalidade cadastrada."}</div>`;
+      }).join("") : `<div class="empty-state">${user.role === "instructor" ? "Você não tem aula neste dia." : "Nenhuma modalidade cadastrada."}</div>`;
 
       if (!selectedModality) {
-        attendanceSlots.innerHTML = `<div class="empty-state">Toque em uma modalidade para ver os horarios.</div>`;
+        attendanceSlots.innerHTML = `<div class="empty-state">Toque em uma modalidade para ver os horários.</div>`;
       } else if (!modalitySlots.length) {
         attendanceSlots.innerHTML = `<div class="empty-state">Nenhuma aula de ${html(selectedModality)} neste dia da semana.</div>`;
       } else {
@@ -1826,7 +1826,7 @@
         : "";
 
       if (!selected) {
-        attendanceTable.innerHTML = `<tr><td colspan="3">Toque em um horario para ver os alunos.</td></tr>`;
+        attendanceTable.innerHTML = `<tr><td colspan="3">Toque em um horário para ver os alunos.</td></tr>`;
         return;
       }
 
@@ -1841,7 +1841,7 @@
             </div>
           </td>
         </tr>
-      `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horario.</td></tr>`;
+      `).join("") : `<tr><td colspan="3">Nenhum aluno agendado neste horário.</td></tr>`;
     }
 
     async function loadRoster() {
@@ -1920,7 +1920,7 @@
         if (list) list.innerHTML = modalityNames.map((name) => `<option value="${html(name)}"></option>`).join("");
         try {
           const response = await api.request(`/dojo/instructors?institutionId=${institutionId}`);
-          $("#new-modality-instructor").innerHTML = `<option value="">Sem instrutor (so a academia faz a chamada)</option>` +
+          $("#new-modality-instructor").innerHTML = `<option value="">Sem instrutor (só a academia faz a chamada)</option>` +
             (response.data || []).filter((item) => item.status === "active")
               .map((item) => `<option value="${item.id}">${html(item.name)}</option>`).join("");
         } catch (error) {
@@ -2117,7 +2117,7 @@
             <h2 style="font-size:18px; margin-bottom:8px;">${html(api.paymentMethodLabel(payment.method))} DOJO gerado</h2>
             <p style="color:#64748B;">${html(payment.prototypeNotice)}</p>
             <div class="token-box" style="margin-top:16px;">${html(payment.referenceCode)}</div>
-            <button class="btn-primary" style="width:auto; margin-top:16px; padding:12px 24px;" data-confirm-dojo-payment="${payment.id}">Confirmar pagamento ficticio</button>
+            <button class="btn-primary" style="width:auto; margin-top:16px; padding:12px 24px;" data-confirm-dojo-payment="${payment.id}">Confirmar pagamento fictício</button>
           `;
           return;
         }
@@ -2252,7 +2252,7 @@
           <h2 style="font-size: 18px; margin-bottom: 8px;">${html(api.paymentMethodLabel(payment.method))} gerado</h2>
           <p style="color:#64748B;">${html(payment.prototypeNotice)}</p>
           <div class="token-box" style="margin-top:16px;">${html(payment.referenceCode)}</div>
-          <button class="btn-primary" style="width:auto; margin-top:16px; padding:12px 24px;" data-confirm-payment="${payment.id}">Confirmar pagamento ficticio</button>
+          <button class="btn-primary" style="width:auto; margin-top:16px; padding:12px 24px;" data-confirm-payment="${payment.id}">Confirmar pagamento fictício</button>
         `;
         return;
       }
@@ -2278,7 +2278,7 @@
           ${plan.features && plan.features.length ? `<ul class="plan-features">${plan.features.map((feature) => `<li>${html(feature)}</li>`).join("")}</ul>` : ""}
           <button class="btn-primary" type="button" data-plan-id="${plan.id}">Contratar</button>
         </article>
-      `).join("") : `<div class="empty-state">Nenhum plano disponivel no momento.</div>`;
+      `).join("") : `<div class="empty-state">Nenhum plano disponível no momento.</div>`;
       setMessage("#plans-message", "", "info");
     } catch (error) {
       setMessage("#plans-message", error.message, "error", error.details);

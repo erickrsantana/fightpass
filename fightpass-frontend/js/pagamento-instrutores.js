@@ -54,8 +54,8 @@
             <td>${item.payout
               ? `<span class="tag tag-ok">Pago em ${esc(api.formatDate(item.payout.paid_at))}</span><br><small>${esc(item.payout.receipt_code)}</small>`
               : `<button type="button" class="btn-primary" style="width:auto; padding:8px 16px;" data-pay="${item.id}" ${!item.amountCents ? "disabled" : ""}>Pagar ${item.amountCents ? money(item.amountCents) : ""}</button>`}</td>
-          </tr>`).join("") : `<tr><td colspan="5">Nenhum instrutor cadastrado. Crie em Gestao.</td></tr>`;
-        $("#payout-totals").textContent = `A pagar neste mes: ${money(data.totals.pendingCents)} | Ja pago: ${money(data.totals.paidCents)}`;
+          </tr>`).join("") : `<tr><td colspan="5">Nenhum instrutor cadastrado. Crie em Gestão.</td></tr>`;
+        $("#payout-totals").textContent = `A pagar neste mês: ${money(data.totals.pendingCents)} | Já pago: ${money(data.totals.paidCents)}`;
       } catch (error) {
         say(error.message, "error");
       }
@@ -71,7 +71,7 @@
           const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
           const cents = Math.round(parseFloat(normalized) * 100);
           if (!Number.isFinite(cents) || cents < 0) {
-            say("Valor por aula invalido.", "error");
+            say("Valor por aula inválido.", "error");
             return;
           }
           await api.request(`/payouts/instructors/${id}/rate`, { method: "PUT", body: { institutionId, rateCents: cents } });
@@ -79,7 +79,7 @@
           await load();
         }
         if (payButton) {
-          if (!window.confirm("Confirmar o pagamento ao instrutor? (simulacao)")) return;
+          if (!window.confirm("Confirmar o pagamento ao instrutor? (simulação)")) return;
           const response = await api.request(`/payouts/instructors/${payButton.dataset.pay}/pay`, {
             method: "POST",
             body: { institutionId, month: month(), method: "pix" }

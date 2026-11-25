@@ -16,7 +16,7 @@ function asyncHandler(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }
 
-function success(res, data, message = "Operacao realizada com sucesso", status = 200) {
+function success(res, data, message = "Operação realizada com sucesso", status = 200) {
   return res.status(status).json({ success: true, message, data });
 }
 
@@ -29,7 +29,7 @@ function validateRequest(req, res, next) {
   if (result.isEmpty()) {
     return next();
   }
-  return next(new ApiError(422, "Dados invalidos", result.array()));
+  return next(new ApiError(422, "Dados inválidos", result.array()));
 }
 
 // Algoritmo fixado: impede ataques de troca de algoritmo ("alg: none" ou HS/RS).
@@ -72,14 +72,14 @@ function auth(requiredRoles = []) {
     const [scheme, token] = header.split(" ");
 
     if (!token || String(scheme).toLowerCase() !== "bearer") {
-      return next(new ApiError(401, "Nao autenticado"));
+      return next(new ApiError(401, "Não autenticado"));
     }
 
     let payload;
     try {
       payload = jwt.verify(token, env.jwt.secret, { algorithms: [JWT_ALGORITHM] });
     } catch (error) {
-      return next(new ApiError(401, "Token invalido ou expirado"));
+      return next(new ApiError(401, "Token inválido ou expirado"));
     }
 
     try {

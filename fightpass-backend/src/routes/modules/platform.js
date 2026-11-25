@@ -78,7 +78,7 @@ router.get(
           active: Number(institutions[0].active)
         }
       },
-      "Visao geral carregada com sucesso"
+      "Visão geral carregada com sucesso"
     );
   })
 );
@@ -374,7 +374,7 @@ router.get(
         users: users.map((row) => ({ ...row, has_avatar: Boolean(row.has_avatar) })),
         counts: Object.fromEntries(counts.map((row) => [row.role, Number(row.total)]))
       },
-      "Usuarios carregados com sucesso"
+      "Usuários carregados com sucesso"
     );
   })
 );
@@ -385,7 +385,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const userId = Number(req.params.id);
     if (!Number.isInteger(userId) || userId <= 0) {
-      throw new ApiError(400, "ID invalido");
+      throw new ApiError(400, "ID inválido");
     }
 
     const rows = await db.query(
@@ -397,7 +397,7 @@ router.get(
     );
     const user = rows[0];
     if (!user) {
-      throw new ApiError(404, "Usuario nao encontrado");
+      throw new ApiError(404, "Usuário não encontrado");
     }
 
     const ficha = { user, institutions: await getUserInstitutions(userId) };
@@ -482,10 +482,10 @@ function readPlanBody(body, { withSessions }) {
   const description = String(body.description || "").trim();
   const price = Number(body.priceCents);
   const duration = Number(body.durationDays);
-  if (name.length < 2 || name.length > 100) throw new ApiError(422, "Nome do plano invalido");
-  if (description.length < 3 || description.length > 255) throw new ApiError(422, "Descricao invalida (3 a 255 caracteres)");
-  if (!Number.isInteger(price) || price < 0 || price > 10000000) throw new ApiError(422, "Valor invalido");
-  if (!Number.isInteger(duration) || duration < 1 || duration > 730) throw new ApiError(422, "Validade invalida (1 a 730 dias)");
+  if (name.length < 2 || name.length > 100) throw new ApiError(422, "Nome do plano inválido");
+  if (description.length < 3 || description.length > 255) throw new ApiError(422, "Descrição inválida (3 a 255 caracteres)");
+  if (!Number.isInteger(price) || price < 0 || price > 10000000) throw new ApiError(422, "Valor inválido");
+  if (!Number.isInteger(duration) || duration < 1 || duration > 730) throw new ApiError(422, "Validade inválida (1 a 730 dias)");
 
   const plan = { name, description, price, duration, isActive: body.isActive ? 1 : 0, applyToActive: Boolean(body.applyToActive) };
   if (withSessions) {
@@ -493,7 +493,7 @@ function readPlanBody(body, { withSessions }) {
       plan.sessionLimit = null;
     } else {
       const limit = Number(body.sessionLimit);
-      if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new ApiError(422, "Limite de treinos invalido");
+      if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new ApiError(422, "Limite de treinos inválido");
       plan.sessionLimit = limit;
     }
   }
@@ -507,7 +507,7 @@ router.put(
     const planId = Number(req.params.id);
     const plan = readPlanBody(req.body || {}, { withSessions: true });
     const current = await db.query("SELECT id FROM access_plans WHERE id = ? LIMIT 1", [planId]);
-    if (!current[0]) throw new ApiError(404, "Plano nao encontrado");
+    if (!current[0]) throw new ApiError(404, "Plano não encontrado");
 
     await db.query(
       `UPDATE access_plans
@@ -544,7 +544,7 @@ router.put(
     const planId = Number(req.params.id);
     const plan = readPlanBody(req.body || {}, { withSessions: false });
     const current = await db.query("SELECT id FROM platform_plans WHERE id = ? LIMIT 1", [planId]);
-    if (!current[0]) throw new ApiError(404, "Plano nao encontrado");
+    if (!current[0]) throw new ApiError(404, "Plano não encontrado");
 
     await db.query(
       `UPDATE platform_plans

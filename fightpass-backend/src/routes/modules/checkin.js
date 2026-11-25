@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
   "/token",
   auth(["student"]),
-  [body("bookingId").optional().isInt({ min: 1 }).withMessage("Agendamento invalido")],
+  [body("bookingId").optional().isInt({ min: 1 }).withMessage("Agendamento inválido")],
   validateRequest,
   asyncHandler(async (req, res) => {
     const params = [req.user.sub];
@@ -40,7 +40,7 @@ router.post(
 
     const booking = rows[0];
     if (!booking) {
-      throw new ApiError(404, "Nao existe agendamento valido para gerar check-in");
+      throw new ApiError(404, "Não existe agendamento válido para gerar check-in");
     }
 
     const token = crypto.randomBytes(24).toString("hex");
@@ -73,7 +73,7 @@ router.post(
 
 router.post(
   "/confirm",
-  [body("token").notEmpty().withMessage("Token obrigatorio")],
+  [body("token").notEmpty().withMessage("Token obrigatório")],
   validateRequest,
   asyncHandler(async (req, res) => {
     const rows = await db.query(
@@ -85,7 +85,7 @@ router.post(
 
     const tokenData = rows[0];
     if (!tokenData || tokenData.status !== "active") {
-      throw new ApiError(400, "Token de check-in invalido");
+      throw new ApiError(400, "Token de check-in inválido");
     }
 
     if (new Date(tokenData.expires_at) < new Date()) {
@@ -100,7 +100,7 @@ router.post(
 
     if (existingAttendance[0]) {
       await db.query("UPDATE attendance_qr_tokens SET status = 'used' WHERE id = ?", [tokenData.id]);
-      throw new ApiError(409, "Presenca ja registrada para este agendamento");
+      throw new ApiError(409, "Presença já registrada para este agendamento");
     }
 
     const connection = await db.pool.getConnection();
@@ -135,8 +135,8 @@ router.get(
   "/roster",
   auth(["institution_admin", "instructor"]),
   [
-    query("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    query("date").optional().isISO8601().withMessage("Data invalida")
+    query("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida"),
+    query("date").optional().isISO8601().withMessage("Data inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -172,8 +172,8 @@ router.post(
   "/manual",
   auth(["institution_admin", "instructor"]),
   [
-    body("bookingId").isInt({ min: 1 }).withMessage("Agendamento invalido"),
-    body("status").isIn(["present", "absent"]).withMessage("Status de presenca invalido")
+    body("bookingId").isInt({ min: 1 }).withMessage("Agendamento inválido"),
+    body("status").isIn(["present", "absent"]).withMessage("Status de presença inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -188,12 +188,12 @@ router.post(
     );
     const booking = rows[0];
     if (!booking) {
-      throw new ApiError(404, "Agendamento nao encontrado para chamada");
+      throw new ApiError(404, "Agendamento não encontrado para chamada");
     }
 
     await ensureInstitutionAccess(req.user.sub, booking.institution_id);
     if (req.user.role === "instructor" && Number(booking.instructor_id) !== Number(req.user.sub)) {
-      throw new ApiError(403, "Somente o professor responsavel pela turma faz a chamada dela");
+      throw new ApiError(403, "Somente o professor responsável pela turma faz a chamada dela");
     }
     const connection = await db.pool.getConnection();
 
@@ -252,7 +252,7 @@ router.get(
       [req.user.sub]
     );
 
-    return success(res, data, "Historico de presencas carregado com sucesso");
+    return success(res, data, "Histórico de presenças carregado com sucesso");
   })
 );
 

@@ -39,7 +39,7 @@ router.get(
 router.get(
   "/subscription",
   auth(["institution_admin", "instructor"]),
-  [query("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida")],
+  [query("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida")],
   validateRequest,
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.query.institutionId);
@@ -61,7 +61,7 @@ router.get(
 router.get(
   "/classes",
   auth(["institution_admin", "instructor"]),
-  [query("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida")],
+  [query("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida")],
   validateRequest,
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.query.institutionId);
@@ -101,8 +101,8 @@ router.post(
   "/payments/simulate",
   auth(["institution_admin"]),
   [
-    body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("method").isIn(PAYMENT_METHODS).withMessage("Forma de pagamento invalida")
+    body("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida"),
+    body("method").isIn(PAYMENT_METHODS).withMessage("Forma de pagamento inválida")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -118,14 +118,14 @@ router.post(
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"]
     });
-    return success(res, payment, "Cobranca DOJO ficticia gerada com sucesso", 201);
+    return success(res, payment, "Cobrança DOJO fictícia gerada com sucesso", 201);
   })
 );
 
 router.post(
   "/payments/checkout",
   auth(["institution_admin"]),
-  [body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida")],
+  [body("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida")],
   validateRequest,
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.body.institutionId, ["institution_admin"]);
@@ -146,7 +146,7 @@ router.post(
 router.get(
   "/payments/mine",
   auth(["institution_admin"]),
-  [query("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida")],
+  [query("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida")],
   validateRequest,
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.query.institutionId, ["institution_admin"]);
@@ -174,7 +174,7 @@ router.get(
 router.get(
   "/payments/:id/receipt",
   auth(["institution_admin"]),
-  [param("id").isInt({ min: 1 }).withMessage("Pagamento invalido")],
+  [param("id").isInt({ min: 1 }).withMessage("Pagamento inválido")],
   validateRequest,
   asyncHandler(async (req, res) => {
     const rows = await db.query(
@@ -189,9 +189,9 @@ router.get(
       [req.params.id]
     );
     const receipt = rows[0];
-    if (!receipt) throw new ApiError(404, "Pagamento nao encontrado");
+    if (!receipt) throw new ApiError(404, "Pagamento não encontrado");
     await ensureInstitutionAccess(req.user.sub, receipt.institution_id, ["institution_admin"]);
-    if (receipt.status !== "paid") throw new ApiError(409, "O comprovante so existe para pagamentos confirmados");
+    if (receipt.status !== "paid") throw new ApiError(409, "O comprovante só existe para pagamentos confirmados");
     receipt.student_document = "";
     return success(res, receipt, "Comprovante carregado com sucesso");
   })
@@ -200,22 +200,22 @@ router.get(
 router.post(
   "/payments/:id/cancel",
   auth(["institution_admin"]),
-  [param("id").isInt({ min: 1 }).withMessage("Pagamento invalido")],
+  [param("id").isInt({ min: 1 }).withMessage("Pagamento inválido")],
   validateRequest,
   asyncHandler(async (req, res) => {
     const rows = await db.query("SELECT institution_id, status FROM dojo_payment_simulations WHERE id = ? LIMIT 1", [req.params.id]);
-    if (!rows[0]) throw new ApiError(404, "Pagamento nao encontrado");
+    if (!rows[0]) throw new ApiError(404, "Pagamento não encontrado");
     await ensureInstitutionAccess(req.user.sub, rows[0].institution_id, ["institution_admin"]);
-    if (rows[0].status !== "pending") throw new ApiError(409, "Somente cobrancas pendentes podem ser canceladas");
+    if (rows[0].status !== "pending") throw new ApiError(409, "Somente cobranças pendentes podem ser canceladas");
     await db.query("UPDATE dojo_payment_simulations SET status = 'cancelled' WHERE id = ?", [req.params.id]);
-    return success(res, { id: Number(req.params.id) }, "Cobranca cancelada");
+    return success(res, { id: Number(req.params.id) }, "Cobrança cancelada");
   })
 );
 
 router.post(
   "/payments/:id/confirm",
   auth(["institution_admin"]),
-  [param("id").isInt({ min: 1 }).withMessage("Pagamento invalido")],
+  [param("id").isInt({ min: 1 }).withMessage("Pagamento inválido")],
   validateRequest,
   asyncHandler(async (req, res) => {
     const rows = await db.query(
@@ -224,7 +224,7 @@ router.post(
     );
     const payment = rows[0];
     if (!payment) {
-      throw new ApiError(404, "Pagamento DOJO nao encontrado");
+      throw new ApiError(404, "Pagamento DOJO não encontrado");
     }
 
     await ensureInstitutionAccess(req.user.sub, payment.institution_id, ["institution_admin"]);
@@ -239,7 +239,7 @@ router.post(
 router.get(
   "/instructors",
   auth(["institution_admin"]),
-  [query("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida")],
+  [query("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida")],
   validateRequest,
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.query.institutionId, ["institution_admin"]);
@@ -265,23 +265,23 @@ router.post(
   "/instructors",
   auth(["institution_admin"]),
   [
-    body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
+    body("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida"),
     body("name").trim().isLength({ min: 3, max: 150 }).withMessage("Informe o nome do instrutor"),
-    body("email").trim().isEmail().withMessage("E-mail invalido").normalizeEmail({ gmail_remove_subaddress: false }),
-    body("document").trim().custom((value) => isValidCpf(value)).withMessage("CPF invalido"),
-    body("phone").optional({ checkFalsy: true }).trim().isLength({ min: 10, max: 20 }).withMessage("Telefone invalido"),
+    body("email").trim().isEmail().withMessage("E-mail inválido").normalizeEmail({ gmail_remove_subaddress: false }),
+    body("document").trim().custom((value) => isValidCpf(value)).withMessage("CPF inválido"),
+    body("phone").optional({ checkFalsy: true }).trim().isLength({ min: 10, max: 20 }).withMessage("Telefone inválido"),
     body("password")
-      .isLength({ min: 8 }).withMessage("A senha deve ter no minimo 8 caracteres")
-      .matches(/[A-Z]/).withMessage("A senha deve conter letra maiuscula")
-      .matches(/[a-z]/).withMessage("A senha deve conter letra minuscula")
-      .matches(/[0-9]/).withMessage("A senha deve conter numero")
+      .isLength({ min: 8 }).withMessage("A senha deve ter no mínimo 8 caracteres")
+      .matches(/[A-Z]/).withMessage("A senha deve conter letra maiúscula")
+      .matches(/[a-z]/).withMessage("A senha deve conter letra minúscula")
+      .matches(/[0-9]/).withMessage("A senha deve conter número")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
     await ensureInstitutionAccess(req.user.sub, req.body.institutionId, ["institution_admin"]);
 
     const roles = await db.query("SELECT id FROM roles WHERE code = 'instructor' LIMIT 1");
-    if (!roles[0]) throw new ApiError(500, "Perfil de instrutor nao configurado");
+    if (!roles[0]) throw new ApiError(500, "Perfil de instrutor não configurado");
 
     const passwordHash = await hashPassword(req.body.password);
     const connection = await db.pool.getConnection();
@@ -315,9 +315,9 @@ router.patch(
   "/instructors/:id/status",
   auth(["institution_admin"]),
   [
-    param("id").isInt({ min: 1 }).withMessage("Instrutor invalido"),
-    body("institutionId").isInt({ min: 1 }).withMessage("Instituicao invalida"),
-    body("status").isIn(["active", "inactive"]).withMessage("Status invalido")
+    param("id").isInt({ min: 1 }).withMessage("Instrutor inválido"),
+    body("institutionId").isInt({ min: 1 }).withMessage("Instituição inválida"),
+    body("status").isIn(["active", "inactive"]).withMessage("Status inválido")
   ],
   validateRequest,
   asyncHandler(async (req, res) => {
@@ -327,7 +327,7 @@ router.patch(
        WHERE institution_id = ? AND user_id = ? AND membership_role = 'instructor'`,
       [req.body.status, req.body.institutionId, req.params.id]
     );
-    if (!result.affectedRows) throw new ApiError(404, "Instrutor nao encontrado nesta academia");
+    if (!result.affectedRows) throw new ApiError(404, "Instrutor não encontrado nesta academia");
     await auditLog(req.user.sub, "instructors.status", "users", Number(req.params.id), {
       status: req.body.status,
       institutionId: req.body.institutionId

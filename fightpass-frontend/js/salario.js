@@ -20,7 +20,7 @@
 
   function monthLabel(value) {
     const [year, month] = String(value).split("-");
-    const names = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    const names = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
     return `${names[Number(month) - 1]} de ${year}`;
   }
 
@@ -34,8 +34,8 @@
       const current = data.items.find((item) => item.month === data.currentMonth);
 
       const cards = [
-        ["Aulas dadas este mes", current ? current.lessons : 0],
-        ["Previsto este mes", current && current.amountCents !== null ? money(current.amountCents) : "-"],
+        ["Aulas dadas este mês", current ? current.lessons : 0],
+        ["Previsto este mês", current && current.amountCents !== null ? money(current.amountCents) : "-"],
         ["Total recebido", money(data.receivedCents)],
         ["A receber", money(data.pendingCents)]
       ];
@@ -51,8 +51,8 @@
           <td>${item.amountCents === null ? "-" : money(item.amountCents)}</td>
           <td>${item.status === "paid"
             ? `<span class="tag tag-ok">Pago em ${esc(api.formatDate(item.paidAt))}</span><br><small>${esc(item.receiptCode)}</small>`
-            : `<span class="tag tag-neutral">${item.rateCents === null ? "Valor nao definido" : "A receber"}</span>`}</td>
-        </tr>`).join("") : `<tr><td colspan="6">Ainda nao ha aulas registradas.</td></tr>`;
+            : `<span class="tag tag-neutral">${item.rateCents === null ? "Valor não definido" : "A receber"}</span>`}</td>
+        </tr>`).join("") : `<tr><td colspan="6">Ainda não há aulas registradas.</td></tr>`;
     } catch (error) {
       const message = $("#salary-message");
       message.className = "state-message error";

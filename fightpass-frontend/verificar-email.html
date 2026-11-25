@@ -11,15 +11,15 @@
     <main class="login-container">
         <form class="card-white auth-card" id="verify-form" autocomplete="off">
             <h1 style="margin-bottom: 5px;">Digite o código de acesso</h1>
-            <p style="color: #64748B; margin-bottom: 25px; font-size: 14px;">Para proteger sua conta, enviamos um codigo de 6 numeros para <strong id="verify-email"></strong>. Abra o e-mail no seu celular e digite o codigo abaixo. Ele vale por 15 minutos.</p>
+            <p style="color: #64748B; margin-bottom: 25px; font-size: 14px;">Para proteger sua conta, enviamos um código de 6 números para <strong id="verify-email"></strong>. Abra o e-mail no seu celular e digite o código abaixo. Ele vale por 15 minutos.</p>
             <div id="verify-message" role="status" aria-live="polite" hidden></div>
             <div class="input-group">
-                <label for="verify-code">Codigo de confirmacao</label>
+                <label for="verify-code">Código de confirmação</label>
                 <input id="verify-code" name="code" type="text" inputmode="numeric" pattern="\d{6}" maxlength="6" class="input-field" placeholder="000000" required style="letter-spacing:6px;font-size:22px;text-align:center;">
             </div>
             <button class="btn-primary" type="submit">Confirmar e entrar</button>
             <div style="text-align:center;margin-top:16px;font-size:14px;">
-                <button type="button" id="resend-code" class="btn-link" style="background:none;border:0;color:#64748B;cursor:pointer;text-decoration:underline;">Reenviar codigo</button>
+                <button type="button" id="resend-code" class="btn-link" style="background:none;border:0;color:#64748B;cursor:pointer;text-decoration:underline;">Reenviar código</button>
                 <br><a href="login.html" style="color:#64748B;">Voltar ao login</a>
             </div>
         </form>
