@@ -2,65 +2,73 @@ const db = require("../database/connection");
 const { ApiError } = require("../lib/http");
 
 const CURRENT_TERMS = {
-  version: "terms_v3",
+  version: "terms_v4",
   title: "Termos de Uso e Política de Privacidade do FightPass",
   summary: "Leia com atenção. Ao aceitar, você declara estar ciente das condições de utilização da plataforma e do tratamento dos seus dados pessoais.",
   sections: [
     {
-      title: "1. Aceitação dos termos",
-      text: "Ao criar uma conta ou utilizar os serviços do FightPass, você concorda integralmente com estes Termos de Uso e com nossa Política de Privacidade. A plataforma FightPass consiste em um sistema integrado de gestão para academias de artes marciais, oferecendo serviços de controle de acesso, gestão de planos, processamento de pagamentos e análise de dados para otimização da experiência do usuário. Caso não concorde com qualquer disposição aqui estabelecida, recomenda-se que não utilize nossos serviços."
+      title: "1. Aceitação e objeto",
+      text: "Ao criar uma conta ou utilizar o FightPass, você declara ter lido e concordado com estes Termos de Uso e com a Política de Privacidade. O FightPass é uma plataforma que conecta alunos a academias e instituições parceiras de artes marciais, permitindo localizar academias, agendar aulas, registrar presença e gerenciar planos, e oferece às academias ferramentas para gerir turmas, alunos, avaliações e repasses. Esta versão foi desenvolvida como projeto acadêmico de conclusão de curso, com fins demonstrativos. Caso não concorde com alguma disposição, não utilize o serviço."
     },
     {
-      title: "2. Coleta e uso de dados",
-      text: "É coletado e processado diversos tipos de dados para fornecer nossos serviços. Entre as informações coletadas estão dados pessoais como nome completo, CPF, endereço, e-mail e telefone; autorização para utilização de determinadas modalidade e atividade física incluindo modalidades praticadas, frequência de treinos e histórico de academias visitadas; e dados técnicos como endereço IP e metadados de interação. Essas informações são utilizadas para gerenciar planos de assinatura, controlar acesso às academias, personalizar a experiência do usuário, gerar relatórios analíticos e melhorar continuamente nossa plataforma."
+      title: "2. Cadastro e conta de acesso",
+      text: "O usuário deve fornecer informações verdadeiras, completas e atualizadas. O cadastro público é destinado a alunos; os perfis de instrutor e de administrador são liberados pela própria instituição, e as academias se cadastram em tela específica. A senha deve ter no mínimo oito caracteres, com ao menos uma letra maiúscula e um número, e as credenciais são pessoais e intransferíveis. A cada acesso, o sistema envia um código de 6 números ao e-mail da conta, válido por 15 minutos, e utiliza o serviço hCaptcha para distinguir pessoas de programas automáticos. O usuário responde por todas as atividades realizadas com a sua conta e deve comunicar imediatamente qualquer uso não autorizado. O plano de teste de um dia é limitado a um por CPF."
     },
     {
-      title: "3. Compartilhamento e segurança",
-      text: "Seus dados podem ser compartilhados exclusivamente para as finalidades estabelecidas: com academias parceiras para controle de acesso e segurança; com processadores de pagamento para transações financeiras; com prestadores de serviço para hospedagem e suporte técnico; e com autoridades competentes quando exigido por lei. Implementa-se medidas de segurança robustas incluindo criptografia TLS 1.2+ em todas as comunicações, armazenamento seguro em servidores cloud, controle rigoroso de acesso e auditorias regulares de segurança para proteger suas informações contra acessos não autorizados."
+      title: "3. Planos e pagamentos",
+      text: "O acesso às aulas depende do plano contratado, cujos valores, benefícios e validade de 30 dias são informados no momento da contratação. Trocar de plano enquanto o atual está em uso gera uma multa equivalente a 20% do valor do plano atual, informada antes da confirmação. As academias parceiras pagam uma mensalidade (Plano DOJO) para disponibilizar e gerenciar aulas e, enquanto ela estiver vencida ou pendente, não podem cadastrar nem gerenciar aulas. Nesta versão de demonstração, os pagamentos por Pix, boleto, cartão e transferência são simulados e não geram cobrança real."
     },
     {
-      title: "4. Direitos do usuário",
-      text: "De acordo com a Lei Geral de Proteção de Dados (LGPD), você possui direitos específicos sobre seus dados pessoais. Estes incluem confirmar a existência de tratamento, acessar dados completos, corrigir informações inexatas, solicitar anonimização ou eliminação de dados, obter portabilidade para outro fornecedor, revogar consentimentos e ser informado sobre compartilhamentos. Para exercer esses direitos, utilize a página \"Ajuda\", disponível no menu da própria plataforma. Os dados são mantidos por períodos específicos: dados cadastrais por 5 anos após encerramento da conta, dados financeiros por 10 anos por obrigação legal, e dados de atividade por 3 anos para análises."
+      title: "4. Agendamentos, cancelamentos e presença",
+      text: "Os agendamentos dependem de plano ativo com treinos disponíveis e de vagas na turma. O cancelamento deve ser feito com pelo menos duas horas de antecedência, caso em que o treino é devolvido ao saldo do plano. A presença é registrada por QR Code de uso único, válido por 45 segundos, ou manualmente pelo instrutor ou pelo gestor. Ausências sem aviso podem constar no histórico de frequência."
     },
     {
-      title: "5. Disposições gerais",
-      text: "Estes termos podem ser atualizados periodicamente para refletir melhorias na plataforma ou mudanças regulatórias. Os usuários são notificados sobre alterações significativas através dos canais oficiais de comunicação. O uso continuado dos serviços após tais notificações implica na aceitação das novas condições. Para questões relacionadas a estes termos ou à privacidade, disponibiliza-se a página \"Ajuda\", no menu da própria plataforma."
+      title: "5. Responsabilidade das instituições",
+      text: "As instituições são responsáveis pelas informações que cadastram (horários, vagas, modalidades e endereço), pela condução das aulas, pela qualificação de seus instrutores e pela segurança do ambiente de treino. O FightPass não presta serviços de treinamento."
     },
     {
-      title: "6. Responsabilidades e obrigações",
-      text: "O usuário é integralmente responsável pela veracidade das informações fornecidas durante o cadastro e para manter confidencialidade de seus dados de acesso. É estritamente proibida a utilização da plataforma para fins ilícitos, incluindo, mas não se limitando a prática de fraudes, falsificação ideológica ou qualquer tipo de atividade que viole direitos de terceiros. O FightPass se reserva o direito de suspender ou cancelar contas que descumprirem estes termos, sem prejuízo das medidas legais cabíveis."
+      title: "6. Saúde e segurança",
+      text: "A prática de artes marciais e de atividades físicas envolve riscos. O aluno declara possuir condições de saúde compatíveis com a atividade, recomenda-se avaliação médica prévia, e as orientações dos instrutores devem ser seguidas durante as aulas."
     },
     {
-      title: "7. Suporte e atendimento",
-      text: "Para questões técnicas, dúvidas sobre o funcionamento da plataforma ou problemas com acesso, o usuário pode utilizar as páginas \"Ajuda\" e \"Reclame aqui\", disponíveis no menu da própria plataforma, após o login."
+      title: "7. Coleta e uso de dados",
+      text: "São tratados dados pessoais como nome completo, e-mail, CPF ou CNPJ, telefone, gênero e foto de perfil (quando informada); dados das academias, como nome, endereço e modalidades; dados de uso da plataforma, como agendamentos, presenças, avaliações, planos e pagamentos simulados; e dados técnicos, como endereço IP e navegador, registrados no momento do aceite dos termos. Essas informações são utilizadas para criar e proteger a conta, localizar academias no mapa, gerenciar planos, controlar acesso e presença, gerar indicadores e repasses e melhorar a plataforma. O e-mail é usado apenas para mensagens do serviço, como códigos de acesso e redefinição de senha, e não para publicidade."
     },
     {
-      title: "8. Propriedade intelectual",
-      text: "Todo o conteúdo, funcionalidades e software que compõem a plataforma FightPass são de propriedade exclusiva da empresa, sendo protegidos pelas leis de propriedade intelectual e direitos autorais. É expressamente proibida a reprodução, distribuição ou utilização não autorizada de qualquer elemento da plataforma, sob pena de responsabilização civil e criminal."
+      title: "8. Compartilhamento e segurança",
+      text: "Os dados são compartilhados somente para as finalidades da plataforma: com a academia vinculada ao aluno, para controle de acesso e acompanhamento; com os serviços de hospedagem, banco de dados e envio de e-mail que operam a plataforma; com o serviço hCaptcha, para a verificação de acesso; com o serviço ViaCEP, para completar endereços; e com autoridades competentes, quando exigido por lei. Os dados pessoais não são vendidos. A plataforma adota senhas armazenadas de forma criptografada, comunicação protegida por HTTPS, autenticação com código enviado por e-mail, controle de acesso por perfil e sessões com validade limitada."
     },
     {
-      title: "9. Legislação aplicável",
-      text: "Estes termos são regidos pelas leis da República Federativa do Brasil, especialmente pela Lei nº 13.709/2018 e pela Lei nº 8.078/1990 do Código de Defesa do Consumidor. Fica eleito o Foro da Comarca de São Paulo/SP para dirimir quaisquer questões oriundas destes termos, com expressa renúncia a qualquer outro, por mais privilegiado que seja."
+      title: "9. Direitos do titular",
+      text: "De acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), o titular pode confirmar a existência de tratamento, acessar seus dados, corrigir informações inexatas, solicitar anonimização ou eliminação, obter portabilidade, revogar consentimentos e ser informado sobre os compartilhamentos. Para exercer esses direitos, utilize a página “Ajuda”, disponível no menu da própria plataforma após o login."
     },
     {
-      title: "10. Política de retenção de dados",
-      text: "Seus dados pessoais são mantidos pelo tempo necessário para cumprir as finalidades para as quais foram coletados, respeitando os períodos mínimos estabelecidos por lei. Dados cadastrais são mantidos por 5 anos após o encerramento da conta; dados financeiros por 10 anos conforme exigência legal; registros de acesso por 6 meses; e dados de atividade por 3 anos para análises e melhorias do sistema. Após esses períodos, os dados são eliminados de forma segura ou anonimizados para fins estatísticos."
+      title: "10. Retenção de dados",
+      text: "Os dados pessoais são mantidos pelo tempo necessário para cumprir as finalidades para as quais foram coletados, respeitados os prazos legais. Dados cadastrais são mantidos por 5 anos após o encerramento da conta; dados financeiros, por 10 anos; registros de acesso, por 6 meses; e dados de atividade, por 3 anos. Após esses períodos, os dados são eliminados de forma segura ou anonimizados."
     },
     {
-      title: "11. Cookies e tecnologias de rastreio",
-      text: "Cookies são utilizados e tecnologias similares para melhorar a experiência do usuário, analisar o tráfego no site e personalizar conteúdo. Os cookies essenciais são necessários para o funcionamento da plataforma, enquanto cookies analíticos nos ajudam a entender como os usuários interagem com os serviços. Você pode gerenciar suas preferências de cookies através das configurações do seu navegador."
+      title: "11. Cookies e armazenamento local",
+      text: "A plataforma utiliza o armazenamento do próprio navegador para manter a sessão do usuário e guardar preferências, como as escolhas da Central de Acessibilidade. O serviço hCaptcha pode utilizar tecnologias próprias para a verificação. A plataforma não utiliza cookies para publicidade. O usuário pode apagar esses dados nas configurações do navegador, o que encerra a sessão e restaura as preferências."
     },
     {
-      title: "12. Comunicações de marketing",
-      text: "Enviar comunicações sobre novidades, promoções e atualizações da plataforma podem ser enviadas para usuários que tenham consentido previamente com esse tipo de comunicação. É possível cancelar o recebimento dessas comunicações a qualquer momento através do link de descadastro presente em cada e-mail ou através das configurações da conta no aplicativo."
+      title: "12. Condutas e responsabilidades do usuário",
+      text: "É vedado fornecer informações falsas, tentar acessar contas ou dados de outros usuários ou instituições, burlar as regras de agendamento ou de presença, praticar fraudes, usar a plataforma para fins ilícitos ou praticar condutas ofensivas ou discriminatórias. O FightPass pode suspender ou cancelar contas que descumprirem estes termos, sem prejuízo das medidas legais cabíveis."
     },
     {
-      title: "13. Alterações nos termos",
-      text: "É reservado o direito de modificar estes Termos e Política de Privacidade a qualquer momento. Alterações significativas serão comunicadas com pelo menos 30 dias de antecedência através de notificação no aplicativo e por e-mail cadastrado. O uso continuado dos serviços após as alterações implica em aceitação das novas condições."
+      title: "13. Propriedade intelectual",
+      text: "Todo o conteúdo, as funcionalidades e o software que compõem o FightPass são protegidos pelas leis de propriedade intelectual e direitos autorais. É proibida a reprodução, a distribuição ou a utilização não autorizada de qualquer elemento da plataforma."
     },
     {
-      title: "14. Resolução de conflitos",
-      text: "Em caso de disputas relacionadas aos serviços, busca-se primariamente a solução através de meios extrajudiciais. Um canal de mediação digital é oferecido para resolução de conflitos, e em caso de insucesso, as partes podem recorrer ao Poder Judiciário nos termos do item 9 destes Termos."
+      title: "14. Alterações destes termos",
+      text: "Estes termos podem ser atualizados a qualquer momento. Havendo alteração relevante, será solicitado novo aceite no acesso seguinte. A continuidade de uso da plataforma após a atualização indica ciência das novas condições."
+    },
+    {
+      title: "15. Suporte e resolução de conflitos",
+      text: "Para dúvidas, problemas de acesso ou reclamações, o usuário pode utilizar as páginas “Ajuda” e “Reclame aqui”, disponíveis no menu da própria plataforma após o login. Em caso de disputa, busca-se primeiro a solução por meios extrajudiciais, e, sem sucesso, as partes podem recorrer ao Poder Judiciário nos termos do item 16."
+    },
+    {
+      title: "16. Legislação aplicável e foro",
+      text: "Estes termos são regidos pelas leis da República Federativa do Brasil, especialmente pela Lei nº 13.709/2018 e pela Lei nº 8.078/1990 (Código de Defesa do Consumidor). Fica eleito o foro da Comarca de São Paulo/SP para dirimir quaisquer questões oriundas destes termos."
     }
   ]
 };
