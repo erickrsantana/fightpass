@@ -38,17 +38,17 @@
 
             <form id="register-form">
                 <div class="input-group">
-                    <label for="register-name">Nome completo</label>
-                    <input id="register-name" type="text" name="name" class="input-field" placeholder="Ex.: João Silva" required>
+                    <label for="register-name">Nome completo *</label>
+                    <input id="register-name" type="text" name="name" class="input-field" placeholder="Ex.: João Silva" required minlength="5">
                 </div>
 
                 <div class="input-group">
-                    <label for="register-email">Email</label>
+                    <label for="register-email">Email *</label>
                     <input id="register-email" type="email" name="email" class="input-field" placeholder="seuemail@exemplo.com" required>
                 </div>
 
                 <div class="input-group">
-                    <label for="register-password">Senha</label>
+                    <label for="register-password">Senha *</label>
                     <input id="register-password" type="password" name="password" class="input-field" placeholder="Minimo de 8 caracteres, letra maiuscula e numero" required minlength="8">
                     <label class="inline-check" for="show-register-password">
                         <input id="show-register-password" type="checkbox">
@@ -59,16 +59,11 @@
                 <input id="account-type" type="hidden" name="accountType" value="student">
 
                 <div class="input-group">
-                    <label for="register-gender">Genero</label>
-                    <select id="register-gender" name="gender" class="input-field">
-                        <option value="">Prefiro informar depois</option>
-                        <option value="female">Feminino</option>
-                        <option value="male">Masculino</option>
-                        <option value="non_binary">Nao binario</option>
-                        <option value="prefer_not_to_say">Prefiro nao informar</option>
-                        <option value="other">Outro</option>
-                    </select>
+                    <label for="register-birth">Data de nascimento *</label>
+                    <input id="register-birth" type="date" name="birthDate" class="input-field" min="1900-01-01" required>
+                    <small style="color:#64748B;">O cadastro é permitido apenas para maiores de 18 anos. A data é usada só para essa conferência e não fica salva.</small>
                 </div>
+
 
                 <div class="input-group" id="institution-group" hidden>
                     <label for="institution-name">Nome da instituição</label>
@@ -76,15 +71,17 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="register-document">CPF ou CNPJ</label>
+                    <label for="register-document">CPF ou CNPJ *</label>
                     <input id="register-document" type="text" name="document" class="input-field" placeholder="000.000.000-00" required>
                     <small style="color:#64748B;">Para aluno, informe um CPF válido para liberar o teste de 1 dia.</small>
                 </div>
 
                 <div class="input-group">
-                    <label for="register-phone">Telefone</label>
-                    <input id="register-phone" type="text" name="phone" class="input-field" placeholder="(11) 99999-9999">
+                    <label for="register-phone">Telefone com DDD *</label>
+                    <input id="register-phone" type="tel" name="phone" class="input-field" placeholder="(11) 99999-9999" required minlength="10" maxlength="15">
                 </div>
+
+                <small style="color:#64748B;display:block;margin-bottom:8px;">Campos marcados com * são obrigatórios. Sem eles, o cadastro não é concluído.</small>
 
                 <div id="register-terms" hidden></div>
 

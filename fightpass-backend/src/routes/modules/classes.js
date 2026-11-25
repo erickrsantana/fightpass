@@ -17,6 +17,15 @@ function normalizeTime(value) {
   return value && value.length === 5 ? `${value}:00` : value;
 }
 
+const OPENING_TIME = "07:00:00";
+const CLOSING_TIME = "22:00:00";
+
+function assertTrainingHours(startTime, endTime) {
+  if (startTime < OPENING_TIME || endTime > CLOSING_TIME) {
+    throw new ApiError(400, "As aulas só podem ser cadastradas entre 07h e 22h");
+  }
+}
+
 async function findClassForManagement(classId) {
   const rows = await db.query(
     `SELECT id, institution_id, modality_id, title, status
@@ -141,6 +150,7 @@ router.post(
     if (startTime >= endTime) {
       throw new ApiError(400, "Horario final deve ser posterior ao horario inicial");
     }
+    assertTrainingHours(startTime, endTime);
 
     const connection = await db.pool.getConnection();
 
@@ -291,6 +301,7 @@ router.post(
     if (startTime >= endTime) {
       throw new ApiError(400, "Horario final deve ser posterior ao horario inicial");
     }
+    assertTrainingHours(startTime, endTime);
 
     const result = await db.query(
       `INSERT INTO class_schedules (class_id, day_of_week, start_time, end_time, room_name)

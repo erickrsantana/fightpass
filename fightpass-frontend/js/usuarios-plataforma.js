@@ -141,7 +141,6 @@
           <div><small>E-mail</small><strong>${esc(u.email)}</strong></div>
           <div><small>Telefone</small><strong>${esc(u.phone || "-")}</strong></div>
           <div><small>CPF/CNPJ</small><strong>${esc(u.document || "-")}</strong></div>
-          <div><small>Genero</small><strong>${esc(api.genderLabel ? api.genderLabel(u.gender) : u.gender || "-")}</strong></div>
           <div><small>Cadastro</small><strong>${esc(api.formatDate(u.created_at))}</strong></div>
         </div>`)}`;
 

@@ -244,6 +244,19 @@
         return;
       }
 
+      const birthData = formData(form);
+      if ((birthData.accountType || "student") === "student") {
+        const birth = new Date(`${birthData.birthDate}T00:00:00`);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
+        if (!birthData.birthDate || Number.isNaN(age) || age < 18) {
+          setMessage("#register-message", "O cadastro é permitido apenas para maiores de 18 anos.", "error");
+          return;
+        }
+      }
+
       setMessage("#register-message", "Criando conta...", "loading");
       const data = formData(form);
       try {
@@ -254,7 +267,7 @@
           email: data.email,
           password: data.password,
           accountType: data.accountType || "student",
-          gender: data.gender || null,
+          birthDate: data.birthDate || null,
           document: data.document,
           phone: data.phone || null,
           institutionName: data.institutionName || data.name,
@@ -1156,7 +1169,6 @@
         $("#profile-name").value = profile.name || "";
         $("#profile-email").value = profile.email || "";
         $("#profile-phone").value = profile.phone || "";
-        if ($("#profile-gender")) $("#profile-gender").value = profile.gender || "";
         if ($("#profile-avatar-url")) $("#profile-avatar-url").value = profile.avatar_url || profile.avatarUrl || "";
         $("#profile-document").value = profile.document || "";
         $("#profile-role").value = api.roleLabel(profile.role);
@@ -1181,7 +1193,6 @@
             name: data.name,
             phone: data.phone,
             document: data.document,
-            gender: data.gender || null,
             avatarUrl: data.avatarUrl || null
           }
         });
@@ -1987,7 +1998,6 @@
       setText("#student-modality", profile.data.modality_name || "-");
       setText("#student-attendance", `${profile.data.attendance_rate ?? 0}%`);
       setText("#student-score", profile.data.average_score ?? 0);
-      setText("#student-gender", api.genderLabel(profile.data.gender));
       setText("#student-plan", profile.data.plan_name || "Sem plano ativo");
       setText("#student-plan-expiration", profile.data.plan_expires_at ? api.formatDate(profile.data.plan_expires_at) : "-");
       const avatar = $("#student-avatar");

@@ -115,7 +115,22 @@ router.post(
   "/register",
   captchaGuard,
   [
-    body("name").trim().notEmpty().withMessage("Nome obrigatorio"),
+    body("name")
+      .trim()
+      .notEmpty().withMessage("Nome obrigatorio")
+      .custom((value) => {
+        if (value.split(/\s+/).filter(Boolean).length < 2 || value.length < 5) {
+          throw new Error("Informe o nome completo (nome e sobrenome)");
+        }
+        return true;
+      }),
+    body("phone").custom((value) => {
+      const digits = onlyDigits(value || "");
+      if (digits.length < 10 || digits.length > 11) {
+        throw new Error("Informe um telefone valido com DDD");
+      }
+      return true;
+    }),
     body("email").isEmail().withMessage("Email invalido").normalizeEmail({ gmail_remove_subaddress: false }),
     body("password")
       .isLength({ min: 8 }).withMessage("A senha deve ter no minimo 8 caracteres")
@@ -139,10 +154,23 @@ router.post(
       .optional()
       .isIn(["student", "institution_admin"])
       .withMessage("Cadastro publico disponivel para alunos e academias"),
-    body("gender")
-      .optional({ checkFalsy: true })
-      .isIn(["female", "male", "non_binary", "prefer_not_to_say", "other"])
-      .withMessage("Genero invalido"),
+    body("birthDate")
+      .custom((value, { req }) => {
+        const accountType = req.body.accountType || "student";
+        if (accountType !== "student") return true;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) {
+          throw new Error("Informe a data de nascimento");
+        }
+        const birth = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(birth.getTime())) throw new Error("Data de nascimento invalida");
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
+        if (age < 18) throw new Error("O cadastro e permitido apenas para maiores de 18 anos");
+        if (age > 120) throw new Error("Data de nascimento invalida");
+        return true;
+      }),
     body("institutionName")
       .if(body("accountType").equals("institution_admin"))
       .trim()
@@ -207,9 +235,9 @@ router.post(
       await connection.beginTransaction();
       const passwordHash = await hashPassword(req.body.password);
       const [insertUser] = await connection.execute(
-        `INSERT INTO users (role_id, name, email, password_hash, document, phone, gender, is_active, email_verified_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ${env.emailVerification.required ? "NULL" : "NOW()"})`,
-        [role.id, req.body.name, req.body.email, passwordHash, req.body.document, req.body.phone || null, req.body.gender || null]
+        `INSERT INTO users (role_id, name, email, password_hash, document, phone, is_active, email_verified_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ${env.emailVerification.required ? "NULL" : "NOW()"})`,
+        [role.id, req.body.name, req.body.email, passwordHash, req.body.document, req.body.phone || null]
       );
 
       let institutionId = null;

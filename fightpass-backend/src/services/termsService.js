@@ -2,7 +2,7 @@ const db = require("../database/connection");
 const { ApiError } = require("../lib/http");
 
 const CURRENT_TERMS = {
-  version: "terms_v4",
+  version: "terms_v5",
   title: "Termos de Uso e Política de Privacidade do FightPass",
   summary: "Leia com atenção. Ao aceitar, você declara estar ciente das condições de utilização da plataforma e do tratamento dos seus dados pessoais.",
   sections: [
@@ -12,7 +12,7 @@ const CURRENT_TERMS = {
     },
     {
       title: "2. Cadastro e conta de acesso",
-      text: "O usuário deve fornecer informações verdadeiras, completas e atualizadas. O cadastro público é destinado a alunos; os perfis de instrutor e de administrador são liberados pela própria instituição, e as academias se cadastram em tela específica. A senha deve ter no mínimo oito caracteres, com ao menos uma letra maiúscula e um número, e as credenciais são pessoais e intransferíveis. A cada acesso, o sistema envia um código de 6 números ao e-mail da conta, válido por 15 minutos, e utiliza o serviço hCaptcha para distinguir pessoas de programas automáticos. O usuário responde por todas as atividades realizadas com a sua conta e deve comunicar imediatamente qualquer uso não autorizado. O plano de teste de um dia é limitado a um por CPF."
+      text: "O usuário deve fornecer informações verdadeiras, completas e atualizadas. O cadastro público é destinado a alunos maiores de 18 anos, e a data de nascimento informada é usada apenas para conferir a idade, sem ser armazenada; menores de idade não podem criar conta sozinhos. Os perfis de instrutor e de administrador são liberados pela própria instituição, e as academias se cadastram em tela específica. A senha deve ter no mínimo oito caracteres, com ao menos uma letra maiúscula e um número, e as credenciais são pessoais e intransferíveis. A cada acesso, o sistema envia um código de 6 números ao e-mail da conta, válido por 15 minutos, e utiliza o serviço hCaptcha para distinguir pessoas de programas automáticos. O usuário responde por todas as atividades realizadas com a sua conta e deve comunicar imediatamente qualquer uso não autorizado. O plano de teste de um dia é limitado a um por CPF."
     },
     {
       title: "3. Planos e pagamentos",
@@ -24,7 +24,7 @@ const CURRENT_TERMS = {
     },
     {
       title: "5. Responsabilidade das instituições",
-      text: "As instituições são responsáveis pelas informações que cadastram (horários, vagas, modalidades e endereço), pela condução das aulas, pela qualificação de seus instrutores e pela segurança do ambiente de treino. O FightPass não presta serviços de treinamento."
+      text: "As instituições são responsáveis pelas informações que cadastram (horários, vagas, modalidades e endereço), pela condução das aulas, cujos horários só podem ser cadastrados entre 07h e 22h, pela qualificação de seus instrutores e pela segurança do ambiente de treino. O FightPass não presta serviços de treinamento."
     },
     {
       title: "6. Saúde e segurança",
@@ -32,7 +32,7 @@ const CURRENT_TERMS = {
     },
     {
       title: "7. Coleta e uso de dados",
-      text: "São tratados dados pessoais como nome completo, e-mail, CPF ou CNPJ, telefone, gênero e foto de perfil (quando informada); dados das academias, como nome, endereço e modalidades; dados de uso da plataforma, como agendamentos, presenças, avaliações, planos e pagamentos simulados; e dados técnicos, como endereço IP e navegador, registrados no momento do aceite dos termos. Essas informações são utilizadas para criar e proteger a conta, localizar academias no mapa, gerenciar planos, controlar acesso e presença, gerar indicadores e repasses e melhorar a plataforma. O e-mail é usado apenas para mensagens do serviço, como códigos de acesso e redefinição de senha, e não para publicidade."
+      text: "São tratados dados pessoais como nome completo, e-mail, CPF ou CNPJ, telefone e foto de perfil (quando informada); dados das academias, como nome, endereço e modalidades; dados de uso da plataforma, como agendamentos, presenças, avaliações, planos e pagamentos simulados; e dados técnicos, como endereço IP e navegador, registrados no momento do aceite dos termos. Essas informações são utilizadas para criar e proteger a conta, localizar academias no mapa, gerenciar planos, controlar acesso e presença, gerar indicadores e repasses e melhorar a plataforma. O e-mail é usado apenas para mensagens do serviço, como códigos de acesso e redefinição de senha, e não para publicidade."
     },
     {
       title: "8. Compartilhamento e segurança",

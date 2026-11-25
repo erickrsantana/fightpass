@@ -14,6 +14,22 @@ if (env.isProduction) {
   if (env.payments.mode !== "gateway") console.warn("[pagamentos] PAYMENTS_MODE != gateway: pagamentos SIMULADOS ativos.");
 }
 
+const FICTITIOUS_INSTITUTIONS = [
+  "Dojo Jurubatuba",
+  "Tatame Chacara Santo Antonio",
+  "Campo Belo Fight Club",
+  "Centro de Lutas Interlagos"
+];
+
+require("./database/connection")
+  .query(
+    `UPDATE institutions
+     SET name = CONCAT(name, ' (fictícia)')
+     WHERE name IN (${FICTITIOUS_INSTITUTIONS.map(() => "?").join(", ")})`,
+    FICTITIOUS_INSTITUTIONS
+  )
+  .catch((error) => console.warn("[instituicoes] nao foi possivel marcar academias ficticias:", error.message));
+
 app.listen(env.port, () => {
   console.log(`${env.appName} executando em ${env.appUrl}`);
   console.log(`[email] provedor: ${emailProvider() || "NENHUM (codigos aparecem so neste terminal)"}`);

@@ -48,10 +48,6 @@ router.put(
     body("name").optional().trim().isLength({ min: 3 }).withMessage("Nome invalido"),
     body("phone").optional().trim().isLength({ min: 10 }).withMessage("Telefone invalido"),
     body("document").optional().trim().isLength({ min: 11 }).withMessage("Documento invalido"),
-    body("gender")
-      .optional({ checkFalsy: true })
-      .isIn(["female", "male", "non_binary", "prefer_not_to_say", "other"])
-      .withMessage("Genero invalido"),
     body("avatarUrl")
       .optional({ checkFalsy: true })
       .custom((value) => {
@@ -81,14 +77,12 @@ router.put(
        SET name = COALESCE(?, name),
            phone = COALESCE(?, phone),
            document = COALESCE(?, document),
-           gender = ?,
            avatar_url = ?
        WHERE id = ?`,
       [
         req.body.name || null,
         req.body.phone || null,
         req.body.document || null,
-        req.body.gender || null,
         req.body.avatarUrl || null,
         req.user.sub
       ]
